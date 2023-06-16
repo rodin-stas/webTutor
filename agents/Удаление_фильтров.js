@@ -13,7 +13,7 @@
 var catalogName = Trim(Param.catalogName);
 var filterName = Trim(Param.filterName);
 
-if ( catalogName == "" || filterName == "" ) {
+if (catalogName == "" || filterName == "") {
 	alert("( Агент: 6649651166799492300 ). Необходимо заполнить обязательные параметры в закладке 'Общие сведения'");
 } else {
 	var delCount = 0;
@@ -25,19 +25,19 @@ if ( catalogName == "" || filterName == "" ) {
 	try {
 		// Удаление фильтров на сервере
 		var listsCard = OpenDoc(lists.Doc.Url);
-		var conditionsForDelete = ArraySelect(listsCard.TopElem.view_conditions_schemes, queryConditions );
-		for ( _cond in conditionsForDelete ) {
-		    _cond.Clear();
-		    delCount++;
+		var conditionsForDelete = ArraySelect(listsCard.TopElem.view_conditions_schemes, queryConditions);
+		for (_cond in conditionsForDelete) {
+			_cond.Clear();
+			delCount++;
 		}
 		listsCard.Save();
 
 		// Удаление фильтров в админке
-		var clientConditionsForDelete = ArraySelect(lists.view_conditions_schemes.view_conditions_scheme, queryConditions );
-		for ( _cond in clientConditionsForDelete ) {
-		    _cond.Clear();
+		var clientConditionsForDelete = ArraySelect(lists.view_conditions_schemes.view_conditions_scheme, queryConditions);
+		for (_cond in clientConditionsForDelete) {
+			_cond.Clear();
 		}
-	} catch(e) {
+	} catch (e) {
 		alert("( Агент: 6649651166799492300 ). Ошибка при удалении фильтров; текст ошибки - " + e);
 	}
 }

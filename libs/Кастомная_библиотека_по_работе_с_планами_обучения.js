@@ -13,24 +13,24 @@ function rereadProgram(programs, personId, planId) {
         rereadDate = null;
         rereadLearning = undefined;
 
-        if(program.type == "course") {
-            courseDoc = OpenDoc( UrlFromDocID( program.object_id ) );
+        if (program.type == "course") {
+            courseDoc = OpenDoc(UrlFromDocID(program.object_id));
             courseTE = courseDoc.TopElem;
 
-            if(courseTE.custom_elems.ChildByKeyExists("reread") && courseTE.custom_elems.ObtainChildByKey("reread").value == 'true') {
-		
-                rereadDate = DateOffset(Date(), 1000000 * 86400 *(-1))
-                if(courseTE.custom_elems.ChildByKeyExists("reread_days") && OptInt(courseTE.custom_elems.ObtainChildByKey("reread_days").value) != undefined ) {
-            
-                    rereadDate = DateOffset(Date(), OptInt(courseTE.custom_elems.ObtainChildByKey("reread_days").value,0) * 86400* (-1))
+            if (courseTE.custom_elems.ChildByKeyExists("reread") && courseTE.custom_elems.ObtainChildByKey("reread").value == 'true') {
+
+                rereadDate = DateOffset(Date(), 1000000 * 86400 * (-1))
+                if (courseTE.custom_elems.ChildByKeyExists("reread_days") && OptInt(courseTE.custom_elems.ObtainChildByKey("reread_days").value) != undefined) {
+
+                    rereadDate = DateOffset(Date(), OptInt(courseTE.custom_elems.ObtainChildByKey("reread_days").value, 0) * 86400 * (-1))
                 }
-            
+
             }
 
             if (rereadDate != null) {
-                rereadLearning = ArrayOptFirstElem(XQuery( "for $elem in learnings where $elem/course_id = " + XQueryLiteral(program.object_id) + " and  $elem/person_id = " + XQueryLiteral(personId) + " and $elem/last_usage_date >= date('" + rereadDate + "')order by $elem/last_usage_date  return $elem" ));
-    
-        
+                rereadLearning = ArrayOptFirstElem(XQuery("for $elem in learnings where $elem/course_id = " + XQueryLiteral(program.object_id) + " and  $elem/person_id = " + XQueryLiteral(personId) + " and $elem/last_usage_date >= date('" + rereadDate + "')order by $elem/last_usage_date  return $elem"));
+
+
                 if (rereadLearning != undefined) {
                     program.result_type = 'learning';
                     program.result_object_id = rereadLearning.id;
@@ -38,7 +38,7 @@ function rereadProgram(programs, personId, planId) {
                     program.start_type = "manual";
                     program.readiness_percent = rereadLearning.score;
 
-                    learningDoc =  OpenDoc( UrlFromDocID( rereadLearning.id ) )
+                    learningDoc = OpenDoc(UrlFromDocID(rereadLearning.id))
                     learningDoc.TopElem.education_plan_id = planId;
                     learningDoc.Save();
                 }
@@ -62,23 +62,23 @@ function updateStructureEducationPlan(educationPlanTE, compoundProgramID) {
     var newProgrommAll = ArraySelectAll(teCompoundProgram.programs.Clone());
 
     educationPlanTE.programs.Clear();
-    educationPlanTE.programs.AssignElem( teCompoundProgram.programs );
+    educationPlanTE.programs.AssignElem(teCompoundProgram.programs);
 
-    for(newProgromm in educationPlanTE.programs) {
-        oldProgramm = ArrayOptFirstElem(ArraySelectByKey( oldProgrammAll, newProgromm.id, 'id' ));
+    for (newProgromm in educationPlanTE.programs) {
+        oldProgramm = ArrayOptFirstElem(ArraySelectByKey(oldProgrammAll, newProgromm.id, 'id'));
 
-        if(oldProgramm != undefined) {
-            _programm = ArrayOptFirstElem(ArraySelectByKey( newProgrommAll, newProgromm.id, 'id' ))
-            newProgromm.AssignExtraElem( oldProgramm );
+        if (oldProgramm != undefined) {
+            _programm = ArrayOptFirstElem(ArraySelectByKey(newProgrommAll, newProgromm.id, 'id'))
+            newProgromm.AssignExtraElem(oldProgramm);
 
-            if(_programm.days == "" || _programm.days == null || _programm.days == undefined) {
+            if (_programm.days == "" || _programm.days == null || _programm.days == undefined) {
                 newProgromm.days = null;
             }
 
-            if(_programm.delay_days == "" || _programm.delay_days == null || _programm.delay_days == undefined) {
+            if (_programm.delay_days == "" || _programm.delay_days == null || _programm.delay_days == undefined) {
                 newProgromm.delay_days = null;
             }
-        }           
+        }
     }
 
     educationPlanTE.compound_program_id = teCompoundProgram.id.Value;

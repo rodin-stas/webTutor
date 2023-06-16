@@ -11,8 +11,8 @@ for (el in findActivePlans) {
 
     for (prog in findEduMethods) {
         findResult = ArrayOptFirstElem(XQuery("sql: \n\
-            declare @education_method_id bigint = "+SqlLiteral(prog.object_id)+"; \n\
-            declare @person_id bigint = "+SqlLiteral(planCard.TopElem.person_id)+"; \n\
+            declare @education_method_id bigint = "+ SqlLiteral(prog.object_id) + "; \n\
+            declare @person_id bigint = "+ SqlLiteral(planCard.TopElem.person_id) + "; \n\
             SELECT \n\
                 ev_res.id, \n\
                 ev_res.event_id \n\
@@ -31,20 +31,20 @@ for (el in findActivePlans) {
                 ev_res.person_id = @person_id \n\
                 and ev_res.is_assist = 1 \n\
         "));
-        if ( findResult != undefined ) {
+        if (findResult != undefined) {
             prog.state_id = 4;
             prog.result_type = "event";
             prog.result_object_id = findResult.event_id;
             // Проставим соструднику education_plan_id в массив collaborators
-            docEvent = OpenDoc( UrlFromDocID( findResult.event_id ) );
+            docEvent = OpenDoc(UrlFromDocID(findResult.event_id));
             findCol = ArrayOptFind(docEvent.TopElem.collaborators, "This.collaborator_id == " + planCard.TopElem.person_id);
             if (findCol != undefined) {
                 findCol.education_plan_id = el.id;
             }
-            docEvent.Save(); 
-		    planCard.Save();
+            docEvent.Save();
+            planCard.Save();
 
-            tools.call_code_library_method( 'libEducation', 'update_education_plan', [ el.id, planCard, planCard.TopElem.person_id, false ] );
+            tools.call_code_library_method('libEducation', 'update_education_plan', [el.id, planCard, planCard.TopElem.person_id, false]);
         }
     }
 }
