@@ -1,7 +1,7 @@
 /**
  * @function rereadProgram
  * @memberof NLMK.Developers
- * @description Перезачитывает пройденные курсы в плане обучения
+ * @description Перезаписывает пройденные курсы в плане обучения
  * @author Rodin_Stas
  * @param  programs  все этапы из плана обучения
  * @param personId id человека
@@ -53,30 +53,30 @@ function rereadProgram(programs, personId, planId) {
  * @description Обновляет структуру плана обучения по модульной программе
  * @author Rodin_Stas
  * @param educationPlanTE карточка плана обучения
- * @param compoundProgramID id модубной программы
+ * @param compoundProgramID id модульной программы
  * @returns {void}
  */
 function updateStructureEducationPlan(educationPlanTE, compoundProgramID) {
     var teCompoundProgram = tools.open_doc(OptInt(compoundProgramID)).TopElem;
-    var oldProgrammAll = ArraySelectAll(educationPlanTE.programs.Clone());
-    var newProgrommAll = ArraySelectAll(teCompoundProgram.programs.Clone());
+    var oldProgramsAll = ArraySelectAll(educationPlanTE.programs.Clone());
+    var newProgramsAll = ArraySelectAll(teCompoundProgram.programs.Clone());
 
     educationPlanTE.programs.Clear();
     educationPlanTE.programs.AssignElem(teCompoundProgram.programs);
 
-    for (newProgromm in educationPlanTE.programs) {
-        oldProgramm = ArrayOptFirstElem(ArraySelectByKey(oldProgrammAll, newProgromm.id, 'id'));
+    for (newProgram in educationPlanTE.programs) {
+        oldProgram = ArrayOptFirstElem(ArraySelectByKey(oldProgramsAll, newProgram.id, 'id'));
 
-        if (oldProgramm != undefined) {
-            _programm = ArrayOptFirstElem(ArraySelectByKey(newProgrommAll, newProgromm.id, 'id'))
-            newProgromm.AssignExtraElem(oldProgramm);
+        if (oldProgram != undefined) {
+            _program = ArrayOptFirstElem(ArraySelectByKey(newProgramsAll, newProgram.id, 'id'))
+            newProgram.AssignExtraElem(oldProgram);
 
-            if (_programm.days == "" || _programm.days == null || _programm.days == undefined) {
-                newProgromm.days = null;
+            if (_program.days == "" || _program.days == null || _program.days == undefined) {
+                newProgram.days = null;
             }
 
-            if (_programm.delay_days == "" || _programm.delay_days == null || _programm.delay_days == undefined) {
-                newProgromm.delay_days = null;
+            if (_program.delay_days == "" || _program.delay_days == null || _program.delay_days == undefined) {
+                newProgram.delay_days = null;
             }
         }
     }

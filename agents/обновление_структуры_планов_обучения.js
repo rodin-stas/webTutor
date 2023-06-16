@@ -39,5 +39,5 @@ if (ArrayCount(educationPlans) > 0) {
 
 }
 
-Log(logName, "Планов обработанно: " + count);
+Log(logName, "Планов обработано: " + count);
 Log(logName, "Агент завершил работу ");
