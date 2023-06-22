@@ -1,0 +1,33 @@
+<profile>
+
+    <functions>
+
+        <Get_info1 desc="Create/Update user" method="post" path="Person">
+
+            <param name="code" type="string" required="true" source="body" desc="ID/Code"/>
+
+
+            <result type="text"/>
+
+            <lib>x-local://wtv/oapi/libs/dbo_import_person1.js</lib>
+
+            <tag name="library"/>
+
+        </Get_info1>
+
+        <Get_test1 desc="Create/Update user" method="get" path="Person">
+
+            <param name="code" type="string" required="true" source="body" desc="ID/Code"/>
+
+
+            <result type="text"/>
+
+            <lib>x-local://wtv/oapi/libs/dbo_import_person1.js</lib>
+
+            <tag name="library"/>
+
+        </Get_test1>
+
+    </functions>
+
+</profile> 

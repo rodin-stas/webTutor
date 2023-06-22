@@ -64,17 +64,31 @@ function processCollaboratorCriterions(){
 		return "";
 }
 
+function processCollaboratorOrg(){
+	orgID = OptInt(criterions[8].value);
+	if (orgID != undefined)
+		return " and cs.org_id = "+orgID+" ";
+	return "";
+}
+
+
 aRes = [];
 progFilter = processModProgramCriterions();
 dateFilter = processDateCriterions();
 colFilter = processCollaboratorCriterions();
+orgFilter = processCollaboratorOrg();
+
+alert("Report")
+alert(criterions[8].value)
 
 try {
-	arr = XQuery("sql:  \n\
+
+	alert("sql:  \n\
 	select DISTINCT \n\
 		eps.id 'eps_id', \n\
 		eps.person_fullname, \n\
     	eps.person_id, \n\
+		cs.org_name, \n\
 		cs.position_name, \n\
 		cs.login, \n\
 		eps.person_id, \n\
@@ -88,14 +102,39 @@ try {
 		g.name 'group_name' \n\
 	from \n\
 		education_plans eps \n\
-		inner join collaborators cs on cs.id = eps.person_id "+colFilter+" \n\
+		inner join collaborators cs on cs.id = eps.person_id "+colFilter+" "+orgFilter+" \n\
 		inner join compound_programs cps on cps.id = eps.compound_program_id " +progFilter+ " \n\
 		inner join compound_programs_ext cpext on cps.id = cpext.id \n\
-		left join groups g on g.id = eps.group_id "+dateFilter 
+		left join groups g on g.id = eps.group_id "+dateFilter)
+
+	arr = XQuery("sql:  \n\
+	select DISTINCT \n\
+		eps.id 'eps_id', \n\
+		eps.person_fullname, \n\
+    	eps.person_id, \n\
+		cs.org_name, \n\
+		cs.position_name, \n\
+		cs.login, \n\
+		eps.person_id, \n\
+		cps.name, \n\
+		cps.code, \n\
+		cps.id 'cps_id', \n\
+		eps.create_date, \n\
+		cpext.with_cancel, \n\
+		DATEADD(DAY,cps.duration,eps.create_date) 'end_date', \n\
+		datediff(day,GETDATE(),DATEADD(DAY,cps.duration,eps.create_date)) 'remaining', \n\
+		g.name 'group_name' \n\
+	from \n\
+		education_plans eps \n\
+		inner join collaborators cs on cs.id = eps.person_id "+colFilter+" "+orgFilter+" \n\
+		inner join compound_programs cps on cps.id = eps.compound_program_id " +progFilter+ " \n\
+		inner join compound_programs_ext cpext on cps.id = cpext.id \n\
+		left join groups g on g.id = eps.group_id "+dateFilter
 	);
 	
 	addColumn("Название должности","ListElem.position_name")
 	addColumn("Табельный номер","ListElem.tab_number")
+	addColumn("Площадка","ListElem.org_name")
 	addColumn("Наименование мод.программы","ListElem.name")
 	addColumn("Код мод.программы","ListElem.code")
 	addColumn("Дата назначения Программы сотруднику","ListElem.create_date")
@@ -116,6 +155,7 @@ try {
 		r.SetProperty("person_fullname",plan.person_fullname);
 		r.SetProperty("position_name",plan.position_name);
 		r.SetProperty("tab_number",plan.login);
+		r.SetProperty("org_name",plan.org_name);
 		r.SetProperty("name",plan.name);
 		r.SetProperty("code",plan.code);
 		r.SetProperty("create_date",plan.create_date);

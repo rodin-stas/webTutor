@@ -1,0 +1,35 @@
+<%
+var RESULT = [];
+var RESP_CODE = 500;
+
+try {
+    var userInit = tools_web.user_init(Request, Request.Query);
+
+    if (!userInit.access) {
+        RESP_CODE = 401;
+        throw UserError("Unauthorized");
+    }
+
+    Server.Execute(AppDirectoryPath() + "/wt/web/include/access_init.html");
+   
+    if (Request.Method !== "GET") {
+        RESP_CODE = 405;
+        throw UserError("Method Not Allowed");
+    }
+
+
+
+    RESULT = {
+        'aaa': 1,
+        'bbb': 2,
+        'ccc': 4
+    };
+
+    Response.SetRespStatus(200, "OK");
+    Response.Write(tools.object_to_text(RESULT, "json"));
+} catch (error) {
+    MESSAGE = ExtractUserError(error);
+    Response.SetRespStatus(RESP_CODE, UrlEncode(MESSAGE));
+    Response.Write(MESSAGE);
+}
+%>
