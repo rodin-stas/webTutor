@@ -65,12 +65,21 @@ function processCollaboratorCriterions(){
 }
 
 function processCollaboratorOrg(){
-	orgID = OptInt(criterions[8].value);
-	if (orgID != undefined)
-		return " and cs.org_id = "+orgID+" ";
+	comProgStr= "";
+	for (i=8;i<26;i++){
+		comProgCriterion = criterions[i];
+		if (comProgCriterion!=undefined){
+			value = OptInt(comProgCriterion.value);
+			comProgStr +=value 
+			if (i != 25) {
+				comProgStr += ','
+			}
+		}
+	}
+	if (StrCharCount(comProgStr) > 0)
+		return " and cs.org_id IN("+comProgStr+")";
 	return "";
 }
-
 
 aRes = [];
 progFilter = processModProgramCriterions();
@@ -78,35 +87,7 @@ dateFilter = processDateCriterions();
 colFilter = processCollaboratorCriterions();
 orgFilter = processCollaboratorOrg();
 
-alert("Report")
-alert(criterions[8].value)
-
 try {
-
-	alert("sql:  \n\
-	select DISTINCT \n\
-		eps.id 'eps_id', \n\
-		eps.person_fullname, \n\
-    	eps.person_id, \n\
-		cs.org_name, \n\
-		cs.position_name, \n\
-		cs.login, \n\
-		eps.person_id, \n\
-		cps.name, \n\
-		cps.code, \n\
-		cps.id 'cps_id', \n\
-		eps.create_date, \n\
-		cpext.with_cancel, \n\
-		DATEADD(DAY,cps.duration,eps.create_date) 'end_date', \n\
-		datediff(day,GETDATE(),DATEADD(DAY,cps.duration,eps.create_date)) 'remaining', \n\
-		g.name 'group_name' \n\
-	from \n\
-		education_plans eps \n\
-		inner join collaborators cs on cs.id = eps.person_id "+colFilter+" "+orgFilter+" \n\
-		inner join compound_programs cps on cps.id = eps.compound_program_id " +progFilter+ " \n\
-		inner join compound_programs_ext cpext on cps.id = cpext.id \n\
-		left join groups g on g.id = eps.group_id "+dateFilter)
-
 	arr = XQuery("sql:  \n\
 	select DISTINCT \n\
 		eps.id 'eps_id', \n\
@@ -123,18 +104,26 @@ try {
 		cpext.with_cancel, \n\
 		DATEADD(DAY,cps.duration,eps.create_date) 'end_date', \n\
 		datediff(day,GETDATE(),DATEADD(DAY,cps.duration,eps.create_date)) 'remaining', \n\
-		g.name 'group_name' \n\
+		g.name 'group_name', \n\
+		R.p.query('custom_elem/name[text() = ''f_codeczeh'']/../value/text()').value('.', 'varchar(248)') as 'code_czeh', \n\
+		R.p.query('custom_elem/name[text() = ''f_nameczeh'']/../value/text()').value('.', 'varchar(596)') as 'name_czeh', \n\
+		R.p.query('custom_elem/name[text() = ''f_funcroute'']/../value/text()').value('.', 'varchar(248)') as 'func_route' \n\
 	from \n\
 		education_plans eps \n\
 		inner join collaborators cs on cs.id = eps.person_id "+colFilter+" "+orgFilter+" \n\
 		inner join compound_programs cps on cps.id = eps.compound_program_id " +progFilter+ " \n\
 		inner join compound_programs_ext cpext on cps.id = cpext.id \n\
+		inner join collaborator c on c.id = cs.id  \n\
+		cross apply c.data.nodes('collaborator/custom_elems') as R(p) \n\
 		left join groups g on g.id = eps.group_id "+dateFilter
 	);
 	
 	addColumn("Название должности","ListElem.position_name")
 	addColumn("Табельный номер","ListElem.tab_number")
 	addColumn("Площадка","ListElem.org_name")
+	addColumn("Код цеха","ListElem.code_czeh")
+	addColumn("Цех","ListElem.name_czeh")
+	addColumn("Функциональное направление","ListElem.func_route")
 	addColumn("Наименование мод.программы","ListElem.name")
 	addColumn("Код мод.программы","ListElem.code")
 	addColumn("Дата назначения Программы сотруднику","ListElem.create_date")
@@ -156,6 +145,9 @@ try {
 		r.SetProperty("position_name",plan.position_name);
 		r.SetProperty("tab_number",plan.login);
 		r.SetProperty("org_name",plan.org_name);
+		r.SetProperty("code_czeh",plan.code_czeh);
+		r.SetProperty("name_czeh",plan.name_czeh);
+		r.SetProperty("func_route",plan.func_route);
 		r.SetProperty("name",plan.name);
 		r.SetProperty("code",plan.code);
 		r.SetProperty("create_date",plan.create_date);
