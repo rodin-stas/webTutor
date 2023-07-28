@@ -1,0 +1,7 @@
+var iPersonID = '7224143427269780420';
+var iEventID = '7125386943184118876';
+var docEvent = OpenDoc( UrlFromDocID( OptInt(iEventID) ));
+var teEvent = docEvent.TopElem;
+
+
+tools.create_notification( '23', iPersonID, teEvent.name, iEventID, null, teEvent )

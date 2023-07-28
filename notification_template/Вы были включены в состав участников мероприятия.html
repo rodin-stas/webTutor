@@ -1,0 +1,75 @@
+<%
+//Получаем id расположения
+placeid = objDocSec.place_id
+//Объявляем Таймзону
+placeid >0 ? placeTimezoneId=objDocSec.place_id.ForeignElem.timezone_id : placeTimezoneId=' '
+placeTimezoneId >0 ? placeTimezone=objDocSec.place_id.ForeignElem.timezone_id.ForeignElem.name : placeTimezone=' '
+//Объявляем регион
+placeid >0 ? placeRegionid=objDocSec.place_id.ForeignElem.region_id : placeRegionid=' '
+placeRegionid>0 ? placeRegion=objDocSec.place_id.ForeignElem.region_id.ForeignElem.name : placeRegion=' '
+//Записываем название расположения
+placeid >0 ? placeName=objDocSec.place_id.ForeignElem.name : placeName=''
+
+
+%>
+<table width="100%" style="background-color: #ebebeb; margin: 0; padding: 0;" border="0" cellpadding="0" cellspacing="0">
+<tbody>
+<tr>
+<td align="center">
+<table border="0" bgcolor="#FFFFFF" cellpadding="0" cellspacing="0" width="600px" style="width: 600px;">
+<tbody>
+<tr>
+<td align="center" valign="middle" bgcolor="#FFFFFF" style="padding: 20px;"></td>
+</tr>
+</tbody>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="600px" style="width: 600px;">
+<tbody>
+<tr></tr>
+<tr>
+<td style="padding-top: 0px; padding-bottom: 0px; padding-right: 0px; margin: 0px;"></td>
+</tr>
+<tr>
+<td bgcolor="#FFFFFF" style="font-family: Arial,Helvetica,sans-serif; font-size: 14px; color: #000000; line-height: 21px; padding: 20px 40px 20px 40px;">
+<h2 style="margin: 0cm; line-height: 21pt;"><span style="color: black; font-family: arial,sans-serif; font-size: 16pt; font-weight: normal;">Уважаемый(ая) </span><span style="color: black; font-family: arial,sans-serif; font-size: 16pt;"><strong><%=objDoc.firstname%> <%=objDoc.middlename%></strong></span><span style="color: black; font-family: arial,sans-serif; font-size: 16pt; font-weight: normal;">, добрый день!</span></h2>
+<p style="line-height: 15.75pt;"><span style="color: black; font-family: arial,sans-serif; font-size: 10.5pt;">Рады подтвердить, что Вы зарегистрированы на обучение <strong><%=objDocSec.name%></strong> </p>
+<%
+eventDocTe = tools.open_doc(objDocSec.id).TopElem;
+phases = ArraySelectAll(eventDocTe.phases);
+for(i = 0; i < ArrayCount(phases); i++) {
+%>   
+<p style="color: black; font-family: arial,sans-serif; font-size: 10.5pt;"><%= i + 1 %> день: <strong><%=StrDate(phases[i].start_date, false, false)%> c <%=StrTime(phases[i].start_date)%> по <%=StrTime(phases[i].finish_date)%> <%=placeTimezone%></strong> </p>
+<%
+}
+%>
+<%
+if(OptInt(objDocSec.place_id, 0) != 0) {
+%>
+<p style="color: black; font-family: arial,sans-serif; font-size: 10.5pt;">Место проведения: <strong><%=objDocSec.place_id.ForeignElem.name%></strong> </p>
+<%
+}
+%>
+<%
+tutor = ArrayOptFirstElem(eventDocTe.tutors)
+if(tutor != undefined) {
+    email = tutor.collaborator_id.ForeignElem.email;
+%>
+<p span="" style="color: black; font-family: arial,sans-serif; font-size: 10.5pt;">Если у вас возникли какие-либо вопросы, пожалуйста, обращайтесь к куратору <%=tutor.person_fullname%> (<a href="<%=email%>" target="_blank" rel="noopener"><%=email%></a>)</p>
+<%
+} else {
+%>
+<p span="" style="color: black; font-family: arial,sans-serif; font-size: 10.5pt;">Если у вас возникли какие-либо вопросы, пожалуйста, обращайтесь в подразделение, курирующее данное обучение.</p>
+<%
+}
+%>
+<p span="" style="color: black; font-family: arial,sans-serif; font-size: 10.5pt;"> До встречи на обучении!
+<hr />
+<p><span style="color: black; font-family: arial,sans-serif; font-size: 10.5pt;"> По техническим вопросам и сбоям системы необходимо обращаться в техническую поддержку <a href="mailto:help@nlmk.com" target="_blank" rel="noopener">help@nlmk.com</a> или по тел. 44-999, 81-44-999, +7(4742)444-999, 8-800-700-0449. </span></p>
+</td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
