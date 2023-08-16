@@ -53,7 +53,7 @@ function processDateCriterions(){
 	fromDate = OptDate(criterions[5].value);
 	toDate = criterions[6].value;
 	if (fromDate != undefined && toDate != undefined)
-		return "where eps.create_date between convert(datetime, '"+fromDate+"',104) and convert(datetime, '"+toDate+"',104) "
+		return "and eps.create_date between convert(datetime, '"+fromDate+"',104) and convert(datetime, '"+toDate+"',104) "
 	return ""
 }
 
@@ -65,21 +65,12 @@ function processCollaboratorCriterions(){
 }
 
 function processCollaboratorOrg(){
-	comProgStr= "";
-	for (i=8;i<26;i++){
-		comProgCriterion = criterions[i];
-		if (comProgCriterion!=undefined){
-			value = OptInt(comProgCriterion.value);
-			comProgStr +=value 
-			if (i != 25) {
-				comProgStr += ','
-			}
-		}
-	}
-	if (StrCharCount(comProgStr) > 0)
-		return " and cs.org_id IN("+comProgStr+")";
+	orgID = OptInt(criterions[8].value);
+	if (orgID != undefined)
+		return " and cs.org_id = "+orgID+" ";
 	return "";
 }
+
 
 aRes = [];
 progFilter = processModProgramCriterions();
@@ -89,6 +80,7 @@ orgFilter = processCollaboratorOrg();
 
 try {
 	arr = XQuery("sql:  \n\
+	DECLARE @boss_main_id BIGINT = (SELECT id FROM boss_types where code = 'main'); \n\
 	select DISTINCT \n\
 		eps.id 'eps_id', \n\
 		eps.person_fullname, \n\
@@ -107,19 +99,29 @@ try {
 		g.name 'group_name', \n\
 		R.p.query('custom_elem/name[text() = ''f_codeczeh'']/../value/text()').value('.', 'varchar(248)') as 'code_czeh', \n\
 		R.p.query('custom_elem/name[text() = ''f_nameczeh'']/../value/text()').value('.', 'varchar(596)') as 'name_czeh', \n\
-		R.p.query('custom_elem/name[text() = ''f_funcroute'']/../value/text()').value('.', 'varchar(248)') as 'func_route' \n\
+		R.p.query('custom_elem/name[text() = ''f_funcroute'']/../value/text()').value('.', 'varchar(248)') as 'func_route', \n\
+		eps.finish_date,\n\
+		cs2.email 'boss_email',\n\
+		cs2.fullname 'boss_fullname', \n\
+		eps.last_activity_date \n\
 	from \n\
 		education_plans eps \n\
-		inner join collaborators cs on cs.id = eps.person_id "+colFilter+" "+orgFilter+" \n\
+		inner join collaborators cs on cs.id = eps.person_id "+colFilter+"  \n\
 		inner join compound_programs cps on cps.id = eps.compound_program_id " +progFilter+ " \n\
 		inner join compound_programs_ext cpext on cps.id = cpext.id \n\
 		inner join collaborator c on c.id = cs.id  \n\
-		cross apply c.data.nodes('collaborator/custom_elems') as R(p) \n\
-		left join groups g on g.id = eps.group_id "+dateFilter
+		outer apply c.data.nodes('collaborator/custom_elems') as R(p) \n\
+		left join groups g on g.id = eps.group_id \n\
+		left join func_managers fm on fm.object_id = eps.person_id and fm.boss_type_id = @boss_main_id\n\
+		left join collaborators cs2 on cs2.id = fm.person_id \n\
+	WHERE \n\
+        cs.is_dismiss = 0"+dateFilter+" "+orgFilter
 	);
 	
 	addColumn("Название должности","ListElem.position_name")
 	addColumn("Табельный номер","ListElem.tab_number")
+	addColumn("Почта руководителя","ListElem.boss_email")
+	addColumn("ФИО руководителя","ListElem.boss_fullname")
 	addColumn("Площадка","ListElem.org_name")
 	addColumn("Код цеха","ListElem.code_czeh")
 	addColumn("Цех","ListElem.name_czeh")
@@ -128,6 +130,7 @@ try {
 	addColumn("Код мод.программы","ListElem.code")
 	addColumn("Дата назначения Программы сотруднику","ListElem.create_date")
 	addColumn("Плановый срок прохождения мод. программы","ListElem.end_date")
+	addColumn("Дата последней активности","ListElem.last_activity_date")
 	addColumn("Осталось дней на прохождение","ListElem.remaining")
 	addColumn("Формат уведомления (с отменой / без)","ListElem.with_cancel")
 	addColumn("Статус Плана обучения","ListElem.plan_state")
@@ -144,6 +147,8 @@ try {
 		r.SetProperty("person_fullname",plan.person_fullname);
 		r.SetProperty("position_name",plan.position_name);
 		r.SetProperty("tab_number",plan.login);
+		r.SetProperty("boss_email",plan.boss_email);
+		r.SetProperty("boss_fullname",plan.boss_fullname);
 		r.SetProperty("org_name",plan.org_name);
 		r.SetProperty("code_czeh",plan.code_czeh);
 		r.SetProperty("name_czeh",plan.name_czeh);
@@ -152,6 +157,7 @@ try {
 		r.SetProperty("code",plan.code);
 		r.SetProperty("create_date",plan.create_date);
 		r.SetProperty("end_date",plan.end_date);
+		r.SetProperty("last_activity_date",plan.last_activity_date);
 		r.SetProperty("remaining",plan.remaining);
 		r.SetProperty("with_cancel", (plan.with_cancel == true ? "Да" : "Нет"));
 	

@@ -38,7 +38,7 @@ eventDocTe = tools.open_doc(objDocSec.id).TopElem;
 phases = ArraySelectAll(eventDocTe.phases);
 for(i = 0; i < ArrayCount(phases); i++) {
 %>   
-<p style="color: black; font-family: arial,sans-serif; font-size: 10.5pt;"><%= i + 1 %> день: <strong><%=StrDate(phases[i].start_date, false, false)%> c <%=StrTime(phases[i].start_date)%> по <%=StrTime(phases[i].finish_date)%> <%=placeTimezone%></strong> </p>
+<p style="color: black; font-family: arial,sans-serif; font-size: 10.5pt;"><%= i + 1 %> день: <strong><%=StrDate(phases[i].start_date, false, false)%> c <%=StrTime(phases[i].start_date)%> до <%=StrTime(phases[i].finish_date)%> <%=placeTimezone%></strong> </p>
 <%
 }
 %>

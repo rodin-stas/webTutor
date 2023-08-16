@@ -1,7 +1,7 @@
 EnableLogExt('update_learning_task_from_education_plan', 'life-time=day');
 LogEvent('update_learning_task_from_education_plan', 'Агент START');
 
-//разберемся с переменными. OBJECTS_ID_STR - содержит и параметры предыдущего агента
+//разберемся с переменными. OBJECTS_ID_STR - содержит параметры предыдущего агента
 cnt = 0; 
 educationPlans = []
 my_arr = OBJECTS_ID_STR.split(';');
