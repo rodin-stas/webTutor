@@ -1,20 +1,16 @@
 
-function createLog(logName, recordLogs) {
-    if(logName == '' || logName == undefined) {
-        logName = "nlmk_log"
-    }
-    if (recordLogs) {
+function Log(logName, message, type, recordLogs) {
+
+    if ( DataType(logName) == "string" && Trim(logName) != "" ) {
         EnableLog ( logName, true )
+    } else {
+        return undefined;
     }
-}
-function Log(recordLogs, logName , message, type) {
-    if(logName == ''|| logName == undefined) {
-        logName = "nlmk_log"
-    }
+
 	if (recordLogs) {
 		LogEvent(logName , type != undefined ? "["+StrLowerCase(type)+"] "+message : message);
 	} else if (type != undefined && StrLowerCase(type) == "warning") {
-        createLog(logName, true);
+        EnableLog ( logName, true );
         LogEvent(logName , type != undefined ? "["+StrLowerCase(type)+"] "+message : message);
     }
 }
@@ -25,10 +21,6 @@ var logName = "update_education_plans"
 var recordLogs = false;
 
 
+Log("TEST", "")
 
-
-createLog(logName,recordLogs) ;
-
-Log(recordLogs, logName, "TEST", "Info")
-
-Log(recordLogs, logName, "TEST", "WARNING")
+Log(logName, "TEST", "WARNING", true)

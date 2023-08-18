@@ -78,6 +78,11 @@ function updateStructureEducationPlan(educationPlanTE, compoundProgramID) {
             if (_program.delay_days == "" || _program.delay_days == null || _program.delay_days == undefined) {
                 newProgram.delay_days = null;
             }
+
+            if (ArrayCount(ArraySelectAll(_program.completed_parent_programs)) == 0) {
+                alert("ЧИСТИМ!!!!!!")
+                newProgram.completed_parent_programs.Clear();
+            }
         }
     }
 

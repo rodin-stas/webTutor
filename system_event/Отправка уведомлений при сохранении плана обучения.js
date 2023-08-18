@@ -62,11 +62,14 @@ function needCreateNotification( catProgram, allEducationMethods, personID ) {
             
     }
     
-    if( catProgram.completed_parent_programs.ChildNum > 0 && ArrayOptFind( ArraySelectAll(catProgram.completed_parent_programs) , "get_program( allEducationMethods, 'This.id' ).state_id < 2" ) != undefined ) {
+    Log(logName, recordLogs,"Кол-во этапов от которых зависит этот == "+catProgram.completed_parent_programs.ChildNum)
+    Log(logName, recordLogs, "Кол-во непройденых этапов "+ArrayCount(ArraySelect(catProgram.completed_parent_programs, "get_program( allEducationMethods, This.program_id.Value ).state_id < 2" )))
+    if( catProgram.completed_parent_programs.ChildNum > 0 && ArrayOptFind(catProgram.completed_parent_programs, "get_program( allEducationMethods, This.program_id.Value ).state_id < 2" ) != undefined ) {
         // alert("Есть незавершенные зависимые этапы");
         Log(logName, recordLogs, "Есть незавершенные зависимые этапы");
         return false
     }
+
 
     findResult = ArrayOptFirstElem(XQuery("sql: \n\
     declare @education_method_id bigint = "+SqlLiteral(catProgram.object_id)+"; \n\
@@ -89,9 +92,35 @@ function needCreateNotification( catProgram, allEducationMethods, personID ) {
         and ev_res.is_assist = 1 \n\
     "));
 
+    findRequest = ArrayOptFirstElem(XQuery("sql: \n\
+    declare @education_method_id bigint = "+SqlLiteral(catProgram.object_id)+"; \n\
+    declare @person_id bigint = "+SqlLiteral(personID)+"; \n\
+    SELECT \n\
+        req.id \n\
+    FROM \n\
+        requests as req  \n\
+        INNER JOIN (  \n\
+            SELECT  \n\
+                eve.* \n\
+            FROM  \n\
+                events as eve  \n\
+            WHERE  \n\
+                eve.education_method_id = @education_method_id  \n\
+        ) as ev ON ev.id = req.object_id \n\
+	WHERE  \n\
+	    req.status_id = 'active' \n\
+	    and req.type = 'event' \n\
+	    and req.person_id = @person_id \n\
+    "));
+
     if ( findResult != undefined ) {
         // alert("есть запись на мероприятие")
         Log(logName, recordLogs, "есть запись на мероприятие");
+        return false
+    }
+
+    if ( findRequest != undefined ) {
+        Log(logName, recordLogs, "есть активная заявка на мероприятие");
         return false
     }
 
@@ -107,7 +136,7 @@ try {
         EnableLog ( logName, true )
     }
 
-    Log(logName, recordLogs, "Отправка уведомлений по учебным программам при сохранении!")
+    Log(logName, recordLogs, "Отправка уведомлений по учебным программам при СОЗДАНИИ!")
     Log(logName, recordLogs, "Учебный план с id = " +iEducationPlanID);
 
     var educationMethods = ArraySelect(teEducationPlan.programs, "This.type == 'education_method' && This.state_id == 0 && This.custom_elems.ObtainChildByKey('notification').value.Value != 'true'");

@@ -15,7 +15,7 @@ function get_Courses() {
             code: Trim(course.code),
             resource_id: Trim(course.resource_id),
             status: Trim(course.status),
-            duration: Trim(course.duration),
+            duration: OptInt(course.duration, null),
             price: Trim(course.price),
             course_finish_redirect: Trim(courseDocTE.course_finish_redirect),
             course_finish_redirect_url: Trim(courseDocTE.course_finish_redirect_url),
@@ -23,21 +23,26 @@ function get_Courses() {
             view_type: Trim(course.view_type),
             mastery_score: OptInt(course.mastery_score, null),
             max_score: OptInt(course.max_score, null),
-            yourself_start: Trim(course.yourself_start)
+            yourself_start: Trim(course.yourself_start),
+            parts: ArraySelectAll(courseDocTE.parts),
+            // access: ArraySelectAll(course.access)
+
         })
+
+        break;
 
     }
 
-    alert("return")
+    // return tools.object_to_text({
+    //     type: "success",
+    //     message: "",
+    //     data: RESULT
+    // }, "json"); 
 
-    return tools.object_to_text({
-        type: "success",
-        message: "",
-        data: RESULT
-    }, "json"); 
+    return RESULT;
 
 }
 
-// res = get_courses()
+res = get_Courses()
 
-// alert(tools.object_to_text(res, 'json'))
+alert(tools.object_to_text(res, 'json'))
