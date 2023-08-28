@@ -48,14 +48,12 @@ function needCreateNotification( catProgram, allEducationMethods, personID ) {
     if( catProgram.plan_date.HasValue ) {
     
         if( catProgram.plan_date > Date() ) {
-            // alert("Планируемая дата > текущей");
             Log(logName, recordLogs, "Планируемая дата > текущей");
             return false
         }
     } else {
         dStartPlanDate = teEducationPlan.plan_date.HasValue ? teEducationPlan.plan_date : teEducationPlan.create_date;
         if( catProgram.delay_days.HasValue && dStartPlanDate.HasValue && DateOffset( dStartPlanDate.Value, catProgram.delay_days*86400 ) > Date() ) {
-            // alert("Планируемая дата не указана, взяли планируемую дата всего плана либо дату создания плана > текущей");
             Log(logName, recordLogs, "Планируемая дата не указана, взяли планируемую дата всего плана либо дату создания плана > текущей");
             return false
         }
@@ -65,7 +63,6 @@ function needCreateNotification( catProgram, allEducationMethods, personID ) {
     Log(logName, recordLogs,"Кол-во этапов от которых зависит этот == "+catProgram.completed_parent_programs.ChildNum)
     Log(logName, recordLogs, "Кол-во непройденых этапов "+ArrayCount(ArraySelect(catProgram.completed_parent_programs, "get_program( allEducationMethods, This.program_id.Value ).state_id < 2" )))
     if( catProgram.completed_parent_programs.ChildNum > 0 && ArrayOptFind(catProgram.completed_parent_programs, "get_program( allEducationMethods, This.program_id.Value ).state_id < 2" ) != undefined ) {
-        // alert("Есть незавершенные зависимые этапы");
         Log(logName, recordLogs, "Есть незавершенные зависимые этапы");
         return false
     }
@@ -114,7 +111,6 @@ function needCreateNotification( catProgram, allEducationMethods, personID ) {
     "));
 
     if ( findResult != undefined ) {
-        // alert("есть запись на мероприятие")
         Log(logName, recordLogs, "есть запись на мероприятие");
         return false
     }
@@ -132,6 +128,8 @@ try {
     var logName = "update_education_plans";
     var recordLogs = true;
 
+    
+
     if (recordLogs) {
         EnableLog ( logName, true )
     }
@@ -140,7 +138,7 @@ try {
     Log(logName, recordLogs, "Учебный план с id = " +iEducationPlanID);
 
     var educationMethods = ArraySelect(teEducationPlan.programs, "This.type == 'education_method' && This.state_id == 0 && This.custom_elems.ObtainChildByKey('notification').value.Value != 'true'");
-    var allEducationMethods = ArraySelectAll(teEducationPlan.programs)
+    var allEducationMethods = ArraySelectAll(teEducationPlan.programs);
     var compoundProgramIdDocTE = tools.open_doc(teEducationPlan.compound_program_id).TopElem;
     var notificationType = compoundProgramIdDocTE.custom_elems.ObtainChildByKey('f_n5g8').value;
     var personID = teEducationPlan.person_id;
@@ -160,7 +158,6 @@ try {
         if(needCreate && (notificationType == "КУ" || notificationType == "ТУ")) {
 
             educationMethod.custom_elems.ObtainChildByKey('notification').value.Value  = true;
-            // educationMethod.name = educationMethod.name + "_Test"
 
             edu_name = educationMethod.name.Value;
             finish_date = educationMethod .finish_date.Value;
@@ -174,11 +171,11 @@ try {
             info = {
                 ep_id: iEducationPlanID,
                 edu_name: String(edu_name),
-                end_date: DateNewTime(finish_date),
+                end_date: StrDate(finish_date, false),
                 curator: String(curatorName),
                 email: String(email),
                 person: String(teEducationPlan.person_fullname),
-                end_date_plan: DateNewTime(teEducationPlan.finish_date),
+                end_date_plan: StrDate(teEducationPlan.finish_date, false),
                 required: String(required)
             }
             createNotification(notificationType, personID, iEducationPlanID, tools.object_to_text(info, 'json'));
