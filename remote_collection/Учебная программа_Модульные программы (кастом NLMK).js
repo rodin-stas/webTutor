@@ -6,13 +6,11 @@ var oCollectionParams =
 	filters: []
 }
 
-try
-{
-	_DISTINCTS;
+try {
 	if (_DISTINCTS == undefined || _DISTINCTS == null || _DISTINCTS == '')
 		throw 'no filter';
 	oCollectionParams.distincts = tools_web.parse_multiple_parameter(_DISTINCTS);
-}catch(e){}
+} catch(e){}
 
 try
 {

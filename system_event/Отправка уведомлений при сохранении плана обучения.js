@@ -43,8 +43,12 @@ function get_program( educationMethods, program_id )
     return catProgram;
 }
 
-function needCreateNotification( catProgram, allEducationMethods, personID ) {
-   
+function needCreateNotification( catProgram, allEducationMethods, cancelNotification, personID ) {
+    if(cancelNotification) {
+        Log(logName, recordLogs, "Установлен флаг - 'Отключить уведомление для данного этапа'. Уведомления не будут отправлены");
+        return false;
+    }
+
     if( catProgram.plan_date.HasValue ) {
     
         if( catProgram.plan_date > Date() ) {
@@ -55,16 +59,17 @@ function needCreateNotification( catProgram, allEducationMethods, personID ) {
         dStartPlanDate = teEducationPlan.plan_date.HasValue ? teEducationPlan.plan_date : teEducationPlan.create_date;
         if( catProgram.delay_days.HasValue && dStartPlanDate.HasValue && DateOffset( dStartPlanDate.Value, catProgram.delay_days*86400 ) > Date() ) {
             Log(logName, recordLogs, "Планируемая дата не указана, взяли планируемую дата всего плана либо дату создания плана > текущей");
-            return false
+            return false;
         }
             
     }
     
-    Log(logName, recordLogs,"Кол-во этапов от которых зависит этот == "+catProgram.completed_parent_programs.ChildNum)
-    Log(logName, recordLogs, "Кол-во непройденых этапов "+ArrayCount(ArraySelect(catProgram.completed_parent_programs, "get_program( allEducationMethods, This.program_id.Value ).state_id < 2" )))
+    Log(logName, recordLogs,"Кол-во этапов от которых зависит этот == "+catProgram.completed_parent_programs.ChildNum);
+    Log(logName, recordLogs, "Кол-во непройденых этапов "+ArrayCount(ArraySelect(catProgram.completed_parent_programs, "get_program( allEducationMethods, This.program_id.Value ).state_id < 2" )));
+
     if( catProgram.completed_parent_programs.ChildNum > 0 && ArrayOptFind(catProgram.completed_parent_programs, "get_program( allEducationMethods, This.program_id.Value ).state_id < 2" ) != undefined ) {
         Log(logName, recordLogs, "Есть незавершенные зависимые этапы");
-        return false
+        return false;
     }
 
 
@@ -128,8 +133,6 @@ try {
     var logName = "update_education_plans";
     var recordLogs = true;
 
-    
-
     if (recordLogs) {
         EnableLog ( logName, true )
     }
@@ -144,6 +147,16 @@ try {
     var personID = teEducationPlan.person_id;
     var required = compoundProgramIdDocTE.custom_elems.ObtainChildByKey("canceling_notif").value.Value;
     var curatorID = compoundProgramIdDocTE.custom_elems.ObtainChildByKey('curator').value.Value;
+    var cancelNotification = compoundProgramIdDocTE.custom_elems.ObtainChildByKey('notif_cancel').value.Value;
+    var duration = ArrayOptFirstElem(XQuery("sql: \n\
+        declare @cpsID bigint = "+SqlLiteral(teEducationPlan.compound_program_id)+"; \n\
+        SELECT \n\
+            [duration]\n\
+        FROM   \n\
+            [compound_programs] \n\
+        where \n\
+            [id] = @cpsID \n\
+    "));
 
     Log(logName, recordLogs, "Всего учебных программ на проверку:  " +ArrayCount(educationMethods));
    
@@ -151,7 +164,7 @@ try {
 
         Log(logName, recordLogs, "Учебная программа: " +educationMethod.name);
 
-        needCreate = needCreateNotification(educationMethod, allEducationMethods, personID);
+        needCreate = needCreateNotification(educationMethod, allEducationMethods, cancelNotification, personID);
 
         Log(logName, recordLogs, "Нужно ли отправлять уведомление:  " + (needCreate == true ? 'да' : 'нет'));
 
@@ -163,20 +176,22 @@ try {
             finish_date = educationMethod .finish_date.Value;
             curatorName = '';
             email = '';
+
             if(OptInt(curatorID) != undefined) {
                 curatorDocTE = tools.open_doc(curatorID).TopElem;
                 curatorName = curatorDocTE.fullname;
                 email = curatorDocTE.email;
             }
+
             info = {
                 ep_id: iEducationPlanID,
-                edu_name: String(edu_name),
+                edu_name: Trim(edu_name),
                 end_date: StrDate(finish_date, false),
-                curator: String(curatorName),
-                email: String(email),
-                person: String(teEducationPlan.person_fullname),
-                end_date_plan: StrDate(teEducationPlan.finish_date, false),
-                required: String(required)
+                curator: Trim(curatorName),
+                email: Trim(email),
+                person: Trim(teEducationPlan.person_fullname),
+                end_date_plan: (OptInt(duration.duration) != undefined ? StrDate(DateOffset(teEducationPlan.create_date, duration.duration * 24 * 60 * 60), false) : 'без срока'),
+                required: Trim(required)
             }
             createNotification(notificationType, personID, iEducationPlanID, tools.object_to_text(info, 'json'));
         }
