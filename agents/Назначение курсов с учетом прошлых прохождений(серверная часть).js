@@ -27,7 +27,8 @@ if (courseTE.custom_elems.ChildByKeyExists("reread") && courseTE.custom_elems.Ob
 for(person in my_arr) {	
 
 	if(rereadDate != undefined) {
-		activate_course = tools.activate_course_to_person( OptInt(person),  OptInt(_selected_course_id), null, null, null,null, null, rereadDate);
+		activateCourse = tools.activate_course_to_person( OptInt(person),  OptInt(_selected_course_id), null, null, null,null, null, rereadDate);
+		activateObjId = OptInt(activateCourse, 0) == 0 ? activateCourse.DocID : activateCourse
 	} else{
 		activate_course = tools.activate_course_to_person( OptInt(person),  OptInt(_selected_course_id), null, null, null);
 	}
