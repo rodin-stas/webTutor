@@ -192,7 +192,7 @@ try {
                 curator: String(curatorName),
                 email: String(email),
                 person: String(teEducationPlan.person_fullname),
-                end_date_plan: (OptInt(duration.duration) != undefined ? StrDate(DateOffset(teEducationPlan.create_date, duration.duration * 24 * 60 * 60), false) : 'без срока'),
+                end_date_plan: (OptInt(duration.duration, 0 ) != 0 ? StrDate(DateOffset(teEducationPlan.create_date, duration.duration * 24 * 60 * 60), false) : 'бессрочно'),
                 required: String(required)
             }
             createNotification(notificationType, personID, iEducationPlanID, tools.object_to_text(info, 'json'));
