@@ -15,7 +15,7 @@ if (recordLogs) {
 Log(logName, "Агент начал работу");
 Log(logName, "Param.compound_program = " + OptInt(Param.compound_program) );
 
-var educationPlans = ArraySelectAll(XQuery('for $elem in education_plans where $elem/compound_program_id = ' + XQueryLiteral( OptInt(Param.compound_program) ) + ' return $elem/Fields("id")'));
+var educationPlans = ArraySelectAll(XQuery('for $elem in education_plans where $elem/state_id < 2 and $elem/compound_program_id = ' + XQueryLiteral( OptInt(Param.compound_program) ) + ' return $elem/Fields("id")'));
 
 Log(logName, "Всего планов на обработку: " + ArrayCount(educationPlans));
 

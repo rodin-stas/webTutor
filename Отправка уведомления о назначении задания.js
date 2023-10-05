@@ -1,6 +1,6 @@
 var Text = "";
 // var result_object_id = '7286096562896514985'
-var result_object_id = OBJECTS_ID_STR
+var result_object_id = OBJECTS_ID_STR;
 var teLearning_task_result = tools.open_doc(result_object_id).TopElem;
 var education_plan_id = teLearning_task_result.education_plan_id;
 
