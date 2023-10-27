@@ -44,5 +44,5 @@ alert("qqqq")
     }
     ArrayCount(ArraySelect(teEducationPlan.programs, "This.type == 'education_method' && This.state_id == 0 && DateNewTime(This.plan_date) == DateNewTime(Date())  && This.custom_elems.ObtainChildByKey('notification').value.Value != 'true'")) >=1
 
-Log(logName, "Планов обработанно: " + count);
+Log(logName, "Планов обработано: " + count);
 Log(logName, "Агент завершил работу ");
