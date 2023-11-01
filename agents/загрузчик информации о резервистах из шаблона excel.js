@@ -4,12 +4,12 @@ function Log(log_file_name, message) {
 	}
 }
 
-function getNullPersonCode(_personCode)
-{
-	while (StrCharCount(_personCode ) < 8) {
-	    _personCode = '0' +  _personCode }
+function getNullPersonCode(_personCode) {
+	while (StrCharCount(_personCode) < 8) {
+		_personCode = '0' + _personCode
+	}
 	return _personCode;
-} 
+}
 
 function getFileURl(sExcelFileUrl) {
 	try {
@@ -41,6 +41,10 @@ function getData(fileUrl) {
 
 	aEntries = [];
 	for (i = 2; i < ArrayCount(oSheet); i++) {
+		if (oSheet[i][0] == "" || oSheet[i][0] == undefined || OptInt(oSheet[i][0]) == undefined) {
+			continue
+		}
+
 		aEntries.push({
 			'person_code': getNullPersonCode(oSheet[i][0]),
 			'start_date': Trim(oSheet[i][1]),
@@ -85,6 +89,15 @@ function fillPersonnelReserveCard(cardTe, data, personData, states) {
 }
 
 function createCareerReserveCard(docPersonnelReserveId, personId, positionId, is_finished, startDate, finishDate) {
+	Log(logName, "create-start")
+	Log(logName, "docPersonnelReserveId == "+ docPersonnelReserveId)
+	Log(logName, "personId =="+ personId)
+	Log(logName, "positionId == "+ positionId)
+	Log(logName, "is_finished =="+is_finished)
+	Log(logName, "startDate == "+ startDate)
+	Log(logName, "finishDate ==" + finishDate)
+	Log(logName, "OptDate(startDate) == ") +OptDate(startDate)
+	Log(logName, "OptDate(finishDate) == ") +OptDate(finishDate)
 	docCareerReserve = OpenNewDoc('x-local://wtv/wtv_career_reserve.xmd');
 	docCareerReserveTE = docCareerReserve.TopElem;
 	docCareerReserveTE.personnel_reserve_id = docPersonnelReserveId;
@@ -92,22 +105,21 @@ function createCareerReserveCard(docPersonnelReserveId, personId, positionId, is
 	tools.common_filling("collaborator", docCareerReserveTE, personId);
 	docCareerReserveTE.position_type = 'position';
 	docCareerReserveTE.position_id = positionId;
-	docCareerReserve.TopElem.start_date = startDate;
-	docCareerReserve.TopElem.finish_date = tools_web.is_true(is_finished) ? finishDate : null;
+	docCareerReserve.TopElem.start_date = OptDate(startDate);
+	docCareerReserve.TopElem.finish_date = tools_web.is_true(is_finished) ? OptDate(finishDate) : null;
 	docCareerReserveTE.status = tools_web.is_true(is_finished) ? 'passed' : null;
 
 	docCareerReserve.BindToDb(DefaultDb);
 	docCareerReserve.Save();
 
-
-	alert(docCareerReserve.DocID)
+	Log(logName, "finish")
 	return docCareerReserve.DocID;
 }
 
 function updateCareerReserveCard(careerReserveId, is_finished, startDate, finishDate) {
 	docCareerReserve = tools.open_doc(careerReserveId);
-	docCareerReserve.TopElem.start_date = startDate;
-	docCareerReserve.TopElem.finish_date = tools_web.is_true(is_finished) ? finishDate : null;
+	docCareerReserve.TopElem.start_date = OptDate(startDate);
+	docCareerReserve.TopElem.finish_date = tools_web.is_true(is_finished) ? OptDate(finishDate) : null;
 	docCareerReserve.TopElem.status = tools_web.is_true(is_finished) ? 'passed' : null;
 
 	docCareerReserve.Save();
@@ -140,8 +152,16 @@ try {
 		Cancel();
 	}
 
+	Log(logName, "Всего данных на обработку " + ArrayCount(data));
+
 	for (info in data) {
 		personData = ArrayOptFirstElem(XQuery("for $i in collaborators where $i/login = " + XQueryLiteral(info.person_code) + " return $i"));
+
+		if(personData == undefined) {
+			Log(logName, "Не можем найти пользователя по коду: " + info.person_code + " Возможно поле логин пустое, так как он уволен");
+			continue;
+		}
+		
 		personnelReserveData = ArrayOptFirstElem(XQuery("for $i in personnel_reserves where $i/person_id = " + XQueryLiteral(personData.id) + " return $i"));
 		positionData = ArrayOptFirstElem(XQuery("for $i in positions where $i/code = " + XQueryLiteral(info.position_code) + " return $i"))
 
@@ -176,18 +196,16 @@ try {
 			docPersonnelReserve.BindToDb(DefaultDb);
 		}
 
-
 		if (positionData != undefined) {
 			careerReserveData = ArrayOptFirstElem(XQuery("for $i in career_reserves where $i/personnel_reserve_id = " + XQueryLiteral(docPersonnelReserve.DocID) + " and $i/position_id = " + XQueryLiteral(positionData.id) + " return $i"));
-
 			if (careerReserveData != undefined) {
-				Log(logName, "Для пользователя с кодом " + info.person_code + " уже есть карточка развития карьеры для должности" + positionData.name + ". Карточка будет обновлена")
+				Log(logName, "Для пользователя с кодом " + info.person_code + " уже есть карточка развития карьеры для должности " + positionData.name + ". Карточка будет обновлена")
 				updateCareerReserveCard(careerReserveData.id, info.status == states[1], info.start_date, info.finish_date);
 			} else {
 				createCareerReserveCard(docPersonnelReserve.DocID, personData.id, positionData.id, info.status == states[1], info.start_date, info.finish_date);
 			}
 		} else {
-			Log(logName, "Нет должности с кодом" + info.position_code + " Карточка развития карьеры не будет создана");
+			Log(logName, "Нет должности с кодом " + info.position_code);
 			docPersonnelReserve.TopElem.comment = "Нет должности с кодом: " + info.position_code
 		}
 
