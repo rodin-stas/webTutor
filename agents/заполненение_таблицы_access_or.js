@@ -1,9 +1,54 @@
+// function updatePersonAccess(personId, str, hex, date) {
+
+//     ArrayDirect(XQuery("sql: \n\
+//     DECLARE @personId bigint = "+ SqlLiteral(personId) + ";\n\
+//     DECLARE @state varchar(max) ="+ SqlLiteral(str) + ";\n\
+//     DECLARE @hex varchar(max) ="+ SqlLiteral(hex) + ";\n\
+//     DECLARE @date DATE = "+ SqlLiteral(date) + "; \n\
+//     IF NOT EXISTS (\n\
+//         SELECT\n\
+//             [id]\n\
+//         FROM\n\
+//             [access_or]\n\
+//         WHERE\n\
+//             [id] = @personId\n\
+//     )\n\
+//     BEGIN\n\
+//         INSERT INTO [access_or] (\n\
+//             [id],\n\
+//             [object_ids],\n\
+//             [hex],\n\
+//             [update_date]\n\
+//         ) VALUES (\n\
+//             @personId,\n\
+//             @state,\n\
+//             @hex,\n\
+//             @date\n\
+//         )\n\
+//     END\n\
+//     ELSE\n\
+//     BEGIN\n\
+//         UPDATE [access_or]\n\
+//         SET\n\
+//             [object_ids] = @state,\n\
+//             [hex] = @hex,\n\
+//             [update_date] = @date\n\
+//         WHERE\n\
+//             [id] = @personId\n\
+//     END\n\
+//     "));
+
+//     return true;
+// }
+
 function updatePersonAccess(str) {
     ArrayDirect(XQuery("sql:  \n\
         BEGIN \n\
             INSERT INTO [access_or] ( \n\
                 [id], \n\
-                [object_ids] \n\
+                [object_ids], \n\
+                [hex],\n\
+                [update_date]\n\
             ) VALUES \n\
            "+ str + "\n\
         END \n\
@@ -12,12 +57,34 @@ function updatePersonAccess(str) {
     return true;
 }
 
-function trunCateTable() {
-    ArrayDirect(XQuery("sql:  \n\
-    TRUNCATE TABLE [access_or] \n\
-    "
-    ))
+function deleteAccess(arrIds) {
+    ArrayDirect(XQuery("sql: \n\
+    DECLARE @ids TABLE (id bigint);\n\
+    INSERT INTO @ids VALUES\n\
+    "+ ArrayMerge(arrIds, '"(" + This + ")"', ",") + ";\n\
+        DELETE \n\
+        FROM \n\
+            [access_or] \n\
+        WHERE \n\
+            [id] IN (SELECT [id] FROM @ids) \n\
+    "));
+
 }
+
+function getStrParams(params) {
+    str = "";
+    for (param in params) {
+        if (StrCharCount(str) == 0) {
+            str = str + "(" + param.id + ",'" + param.access + "','" + param.hex + "','" + Date() + "')"
+
+        } else {
+            str = str + "," + "(" + param.id + ",'" + param.access + "','" + param.hex + "','" + Date() + "')"
+        }
+    }
+
+    return str;
+}
+
 
 function Log(log_file_name, message) {
     if (recordLogs) {
@@ -25,27 +92,26 @@ function Log(log_file_name, message) {
     }
 }
 
-function getStrParams(params) {
-    str = "";
-    for (param in params) {
-        if (StrCharCount(str) == 0) {
-            str = str + "(" + param.id + ",'" + param.access + "')"
-
-        } else {
-            str = str + "," + "(" + param.id + ",'" + param.access + "')"
-        }
-    }
-
-    return str;
-}
-
 try {
     var logName = Trim(Param.logs_name) != '' ? Param.logs_name : "nlmk_or";
     var recordLogs = Param.record_logs;
-    var curPersons = ArraySelectAll(XQuery("for $elem in collaborators where $elem/is_dismiss != 1 return $elem/Fields('id')"));
+    var curPersons = ArraySelectAll(XQuery("sql:  \n\
+        SELECT \n\
+        	[t0].[id],\n\
+        	[t1].[hex]\n\
+        FROM \n\
+        	[collaborators] AS [t0]\n\
+        	LEFT JOIN [access_or] AS [t1] ON [t1].[id] = [t0].[id]\n\
+        WHERE \n\
+        	[t0].[is_dismiss] != 1\n\
+    "));
     var curCourses = ArraySelectAll(XQuery("for $elem in courses where $elem/status != 'archive' and doc-contains($elem/id, '', '[access_all = false~bool]') return $elem/Fields('id')"));
     var curCompoundPrograms = ArraySelectAll(XQuery("for $elem in compound_programs where doc-contains($elem/id, '', '[access_all = false~bool]') return $elem/Fields('id')"));
     var allObj = ArrayUnion(curCourses, curCompoundPrograms);
+
+    if (recordLogs) {
+		EnableLog(logName, true)
+	}
 
     Log(logName, "Агент начал работу");
     Log(logName, "Всего людей на обработку: " + ArrayCount(curPersons));
@@ -68,16 +134,43 @@ try {
 
         }
 
-        _accessData.push({
-            'id': person.id,
-            'access': orIds.join(',')
-        })
+        arr = ArraySort(orIds, 'This', '+')
+        newHex = Md5Hex(arr.join(','));
+        if (tools_library.string_is_null_or_empty(person.hex) || person.hex != newHex) {
+
+            // updatePersonAccess(person.id, arr.join(','), newHex, Date())
+            _accessData.push({
+                'id': person.id,
+                'access': arr.join(','),
+                'hex': newHex
+            })
+        }
+
+
     }
+
+    var curDismiss = ArraySelectAll(XQuery("sql:  \n\
+        SELECT \n\
+            [t0].[id]\n\
+        FROM\n\
+            [access_or] AS [t0]\n\
+            INNER JOIN [collaborators] AS [t1] ON [t1].[id] = [t0].[id]\n\
+        WHERE\n\
+            [t1].[is_dismiss] = 1\n\
+    "));
+
+    Log(logName, "Удалим уволенных сотрудников, всего их:" + ArrayCount(curDismiss));
+    Log(logName, "Удалим всех, у кого поменялись права:" + ArrayCount(_accessData));
+
+    var deleteArr = ArrayUnion(ArrayExtractKeys(curDismiss, 'id'), ArrayExtractKeys(_accessData, 'id'));
+    Log(logName, "Всего на удаление:" + ArrayCount(deleteArr));
+
+    deleteAccess(deleteArr);
 
     var elemCount = 1000;
     var pages = (ArrayCount(_accessData) / elemCount) + 1
 
-    trunCateTable();
+    // trunCateTable();
 
     for (i = 1; i <= pages; i++) {
 
