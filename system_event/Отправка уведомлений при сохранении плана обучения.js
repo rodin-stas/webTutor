@@ -8,15 +8,17 @@ function createNotification(type, personID, educationPlanId, info) {
 
     personDocTE = tools.open_doc(personID).TopElem;
     personEmail = personDocTE.email;
+    
 
     if (StrCharCount(personEmail) > 0) {
 
+        personLng = tools.call_code_library_method("nlmk_localization", "getCurLng", [personID, null]);
         if (type == "КУ") {
-            tools.create_notification('KU_education_method_assign', personID, info, educationPlanId);
+            tools.call_code_library_method("nlmk", "create_notification", [String("KU_education_method_assign" + "_" + personLng), personID, info, educationPlanId]);
         }
 
         if (type == "ТУ") {
-            tools.create_notification('TU_education_method_assign', personID, info, educationPlanId);
+            tools.call_code_library_method("nlmk", "create_notification", [String("TU_education_method_assign" + "_" + personLng), personID, info, educationPlanId]);
         }
 
     } else {
@@ -24,12 +26,13 @@ function createNotification(type, personID, educationPlanId, info) {
         funcID = ArrayOptFirstElem(XQuery("for $fm in func_managers where $fm/object_id = " + XQueryLiteral(personID) + " and $fm/boss_type_id = " + XQueryLiteral(MAIN_BOSS_TYPE_ID) + " return $fm"));
 
         if (funcID != undefined) {
+            funcLng = tools.call_code_library_method("nlmk_localization", "getCurLng", [funcID.person_id, null]);
             if (type == "КУ") {
-                tools.create_notification('KU_education_method_assign_boss', funcID.person_id, info, educationPlanId);
+                tools.call_code_library_method("nlmk", "create_notification", [String("KU_education_method_assign_boss" + "_" + funcLng), funcID.person_id, info, educationPlanId]);
             }
 
             if (type == "ТУ") {
-                tools.create_notification('TU_education_method_assign_boss', funcID.person_id, info, educationPlanId);
+                tools.call_code_library_method("nlmk", "create_notification", [String("TU_education_method_assign_boss" + "_" + funcLng), funcID.person_id, info, educationPlanId]);
             }
 
         }
@@ -156,7 +159,8 @@ try {
     "));
 
     Log(logName, recordLogs, "Всего учебных программ на проверку:  " + ArrayCount(educationMethods));
-
+	
+	alert(personID + ' ' + ArrayCount(educationMethods))
     for (educationMethod in educationMethods) {
 
         Log(logName, recordLogs, "Учебная программа: " + educationMethod.name);
@@ -170,11 +174,17 @@ try {
 
         Log(logName, recordLogs, "Нужно ли отправлять уведомление:  " + (needCreate == true ? 'да' : 'нет'));
 
+		alert('needCreate ' + needCreate);
+		alert('notificationType ' + notificationType);
+		
         if (needCreate && (notificationType == "КУ" || notificationType == "ТУ")) {
 
             educationMethod.custom_elems.ObtainChildByKey('notification').value.Value = true;
+			educationMethod.custom_elems.ObtainChildByKey('notification_log').value.Value = ParseDate(Date());
+			
 
             edu_name = educationMethod.name.Value;
+			start_date = educationMethod.create_date.Value;
             finish_date = educationMethod.finish_date.Value;
             curatorName = '';
             email = '';
@@ -188,6 +198,7 @@ try {
             info = {
                 ep_id: iEducationPlanID,
                 edu_name: String(edu_name),
+				start_date: StrDate(start_date, false),
                 end_date: StrDate(finish_date, false),
                 curator: String(curatorName),
                 email: String(email),
@@ -196,7 +207,7 @@ try {
                 required: String(required)
             }
             createNotification(notificationType, personID, iEducationPlanID, tools.object_to_text(info, 'json'));
-        }
+		}
     }
 
 } catch (err) {

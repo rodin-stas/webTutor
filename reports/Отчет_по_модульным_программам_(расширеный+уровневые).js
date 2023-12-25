@@ -50,41 +50,33 @@ function processModProgramCriterions(){
 }
 
 function processDateCriterions(){
-	fromDate = OptDate(criterions[5].value);
-	toDate = criterions[6].value;
+	fromDate = OptDate(criterions[6].value);
+	toDate = OptDate(criterions[7].value);
 	if (fromDate != undefined && toDate != undefined)
 		return "and eps.create_date between convert(datetime, '"+fromDate+"',104) and convert(datetime, '"+toDate+"',104) "
 	return ""
 }
 
 function processCollaboratorCriterions(){
-		colID = OptInt(criterions[7].value,0);
+		colID = OptInt(criterions[8].value,0);
 		if (colID !=0)
 			return " and cs.id = "+colID+" ";
 		return "";
 }
 
-function processCollaboratorOrg(){
-	orgID = OptInt(criterions[8].value);
-	if (orgID != undefined)
-		return " and cs.org_id = "+orgID+" ";
-	return "";
-}
-
-
 aRes = [];
 progFilter = processModProgramCriterions();
 dateFilter = processDateCriterions();
 colFilter = processCollaboratorCriterions();
-orgFilter = processCollaboratorOrg();
 
-try {
+try {  
 	arr = XQuery("sql:  \n\
 	DECLARE @boss_main_id BIGINT = (SELECT id FROM boss_types where code = 'main'); \n\
 	select DISTINCT \n\
 		eps.id 'eps_id', \n\
 		eps.person_fullname, \n\
     	eps.person_id, \n\
+		eps.finish_date, \n\
 		cs.org_name, \n\
 		cs.position_name, \n\
 		cs.login, \n\
@@ -100,22 +92,24 @@ try {
 		R.p.query('custom_elem/name[text() = ''f_codeczeh'']/../value/text()').value('.', 'varchar(248)') as 'code_czeh', \n\
 		R.p.query('custom_elem/name[text() = ''f_nameczeh'']/../value/text()').value('.', 'varchar(596)') as 'name_czeh', \n\
 		R.p.query('custom_elem/name[text() = ''f_funcroute'']/../value/text()').value('.', 'varchar(248)') as 'func_route', \n\
-		eps.finish_date,\n\
 		cs2.email 'boss_email',\n\
 		cs2.fullname 'boss_fullname', \n\
-		eps.last_activity_date \n\
+		eps.last_activity_date, \n\
+		ep.data.value('(/education_plan/custom_elems/custom_elem[name=''notification_remind'']/value)[1]', 'varchar(300)') AS 'notification_remind' \n\
 	from \n\
 		education_plans eps \n\
-		inner join collaborators cs on cs.id = eps.person_id "+colFilter+"  \n\
-		inner join compound_programs cps on cps.id = eps.compound_program_id " +progFilter+ " \n\
+		INNER JOIN education_plan AS ep ON ep.id = eps.id \n\
+		inner join collaborators cs on cs.id = eps.person_id  \n\
+		inner join compound_programs cps on cps.id = eps.compound_program_id  \n\
 		inner join compound_programs_ext cpext on cps.id = cpext.id \n\
 		inner join collaborator c on c.id = cs.id  \n\
 		outer apply c.data.nodes('collaborator/custom_elems') as R(p) \n\
-		left join groups g on g.id = eps.group_id \n\
+		left join groups g on g.id = eps.group_id  \n\
 		left join func_managers fm on fm.object_id = eps.person_id and fm.boss_type_id = @boss_main_id\n\
 		left join collaborators cs2 on cs2.id = fm.person_id \n\
 	WHERE \n\
-        cs.is_dismiss = 0"+dateFilter+" "+orgFilter
+		 \n\
+		cs.is_dismiss = 0"+dateFilter+" "+ colFilter +" "+progFilter
 	);
 	
 	addColumn("Название должности","ListElem.position_name")
@@ -131,6 +125,7 @@ try {
 	addColumn("Дата назначения Программы сотруднику","ListElem.create_date")
 	addColumn("Плановый срок прохождения мод. программы","ListElem.end_date")
 	addColumn("Дата последней активности","ListElem.last_activity_date")
+	addColumn("Даты уведомлений","ListElem.notification_remind")//
 	addColumn("Осталось дней на прохождение","ListElem.remaining")
 	addColumn("Формат уведомления (с отменой / без)","ListElem.with_cancel")
 	addColumn("Статус Плана обучения","ListElem.plan_state")
@@ -158,6 +153,7 @@ try {
 		r.SetProperty("create_date",plan.create_date);
 		r.SetProperty("end_date",plan.end_date);
 		r.SetProperty("last_activity_date",plan.last_activity_date);
+		r.SetProperty("notification_remind",String(plan.notification_remind).split(",").join(' | '));
 		r.SetProperty("remaining",plan.remaining);
 		r.SetProperty("with_cancel", (plan.with_cancel == true ? "Да" : "Нет"));
 	
