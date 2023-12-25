@@ -71,7 +71,7 @@ try {
 			"person": collabTE.fullname,
 			"prog_name" : String(cmpd_program_info.name),
 			"end_date" : end_date,
-			"curator" : (curLng == 'ru' ? curator.fullname + " " + curator.email : String(tools.call_code_library_method("nlmk_localization", "getCurLngValue", [curator.fullname])) + " " + curator.email)
+			"curator" : (curLng == 'ru' ? curator.fullname + " " + curator.email : String(tools.call_code_library_method("nlmk_localization", "latinTranslation", [curator.fullname])) + " " + curator.email)
 		};
 		
 		if (cmpd_program_info.notific_type != "" && !collabTE.is_dismiss) {
@@ -89,12 +89,12 @@ try {
 				MAIN_BOSS_TYPE_ID = ArrayOptFirstElem(XQuery("for $elem in boss_types where $elem/code = 'main' return $elem", {id: null})).id;
 				func_ID = ArrayOptFirstElem(XQuery("for $fm in func_managers where $fm/object_id = "+teEducationPlan.person_id+" and boss_type_id = "+MAIN_BOSS_TYPE_ID+" return $fm")).person_id;	
 				func_lng = tools.call_code_library_method("nlmk_localization", "getCurLng", [func_ID, null]);
-				info.curator = (func_lng == 'ru' ? curator.fullname + " " + curator.email : String(tools.call_code_library_method("nlmk_localization", "getCurLngValue", [curator.fullname])) + " " + curator.email);
+				info.curator = (func_lng == 'ru' ? curator.fullname + " " + curator.email : String(tools.call_code_library_method("nlmk_localization", "latinTranslation", [curator.fullname])) + " " + curator.email);
 
 				if (cmpd_program_info.notific_type == "ТУ") {
 					tools.call_code_library_method("nlmk", "create_notification", [String("TU_bossplan_assign" + "_" + func_lng), Int(func_ID),tools.object_to_text(info,"json"),iEducationPlanID]);
 				} else {
-					tools.call_code_library_method("nlmk", "create_notification", [String("CU_bossplan_assign" + "_" + func_lng), Int(func_ID),tools.object_to_text(info,"json"),iEducationPlanID]);
+					tools.call_code_library_method("nlmk", "++create_notification", [String("CU_bossplan_assign" + "_" + func_lng), Int(func_ID),tools.object_to_text(info,"json"),iEducationPlanID]);
 				}
 			}
 		}
