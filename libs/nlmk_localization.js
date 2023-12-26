@@ -1,4 +1,4 @@
-/**
+﻿/**
  *Получение массива локализованных переменных
  * @param {string} templateID Id шаблона документов
  * @returns {any[]}
@@ -94,8 +94,12 @@ function latinTranslation(DataStr) {
     var textToArray = StrToCharArray(DataStr)
 
     for (i = 0; i < ArrayCount(textToArray); i++) {
-        if (converter[String(textToArray[i])] != undefined) { result += converter[String(textToArray[i])]; }
-        else { result += DataStr[i]; }
+
+        try {
+            result += converter[textToArray[i]]
+        } catch (err) {
+            result += textToArray[i];
+        }
     }
 
     return result;

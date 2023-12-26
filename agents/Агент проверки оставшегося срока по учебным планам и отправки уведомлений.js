@@ -1,24 +1,24 @@
-function sendNotification(person_id, need_cancel, remaining, type_notification) {
+function sendNotification(person_id, need_cancel, remaining, type_notification, personLng) {
 	if (type_notification == "ТУ") {
 		if (need_cancel) {
-			tools.call_code_library_method("nlmk", "create_notification", ["plan_remaining_duration_with_cancel_TU", person_id, remaining]);  //ТУ
+			tools.call_code_library_method("nlmk", "create_notification", [String("plan_remaining_duration_with_cancel_TU" + "_" + personLng), person_id, remaining]);  //ТУ
 		} else {
-			tools.call_code_library_method("nlmk", "create_notification", ["plan_remaining_duration_TU", person_id, remaining]);  //ТУ
+			tools.call_code_library_method("nlmk", "create_notification", [String("plan_remaining_duration_TU" + "_" + personLng), person_id, remaining]);  //ТУ
 		}
 	} else if (type_notification == "КУ") {
 		if (need_cancel) {
-			tools.call_code_library_method("nlmk", "create_notification", ["plan_remaining_duration_with_cancel", person_id, remaining]); //КУ
+			tools.call_code_library_method("nlmk", "create_notification", [String("plan_remaining_duration_with_cancel" + "_" + personLng), person_id, remaining]); //КУ
 		} else {
-			tools.call_code_library_method("nlmk", "create_notification", ["plan_remaining_duration", person_id, remaining]);//КУ
+			tools.call_code_library_method("nlmk", "create_notification", [String("plan_remaining_duration" + "_" + personLng), person_id, remaining]);//КУ
 		}
 	}
 }
 
-function sendNotificationEndRemainig(person_id, remaining, type_notification) {
+function sendNotificationEndRemaining(person_id, remaining, type_notification, personLng) {
 	if (type_notification == "ТУ") {
-		tools.call_code_library_method("nlmk", "create_notification", ["plan_remaining_0_TU", person_id, remaining]); //ТУ
+		tools.call_code_library_method("nlmk", "create_notification", [String("plan_remaining_0_TU" + "_" + personLng), person_id, remaining]); //ТУ
 	} else if (type_notification == "КУ") {
-		tools.call_code_library_method("nlmk", "create_notification", ["plan_remaining_0", person_id, remaining]); //КУ
+		tools.call_code_library_method("nlmk", "create_notification", [String("plan_remaining_0" + "_" + personLng), person_id, remaining]); //КУ
 	}
 }
 
@@ -129,6 +129,8 @@ for (plan in active_plans) {
     if ( collabTE.is_dismiss ) {
         continue;
     }
+
+    collabLng == tools.call_code_library_method("nlmk_localization", "getCurLng", [plan.person_id, collabTE]);
 	LogEvent("plan_durations_log", "Пошли по планам");
 	try {
 		LogEvent("plan_durations_log", "Обрабатывается план обучения " + plan.plan_id);
@@ -152,12 +154,12 @@ for (plan in active_plans) {
 			if (is_required == undefined){
 				if ( plan.notific_type != "" ) {
 					if ( planRemaining ) {
-						sendNotification(plan.plan_id, plan.with_cancel, info_data, plan.notific_type);
+						sendNotification(plan.plan_id, plan.with_cancel, info_data, plan.notific_type, collabLng);
 					} else if (plan.with_cancel){
-						sendNotificationEndRemainig(plan.plan_id, info_data, plan.notific_type);
+						sendNotificationEndRemaining(plan.plan_id, info_data, plan.notific_type, collabLng);
 					} else {
 						if (plan.notific_type == "ТУ"){
-							sendNotificationEndRemainig(plan.plan_id, info_data, plan.notific_type);
+							sendNotificationEndRemaining(plan.plan_id, info_data, plan.notific_type, collabLng);
 						}
 						// if (plan.notific_type == "КУ"){
 						// 	sendNotificationEndRemainig(plan.plan_id, info_data, plan.notific_type);
@@ -168,34 +170,36 @@ for (plan in active_plans) {
 				if ( planRemaining ) {
 					sendNotification(plan.plan_id, plan.with_cancel, info_data, "ТУ");
 				} else if (plan.with_cancel){
-					sendNotificationEndRemainig(plan.plan_id, info_data, "ТУ");
+					sendNotificationEndRemaining(plan.plan_id, info_data, "ТУ");
 				} else {
-					sendNotificationEndRemainig(person_id, remaining, "ТУ")
+					sendNotificationEndRemaining(person_id, remaining, "ТУ")
 				}
 			}
         }
 
 		MAIN_BOSS_TYPE_ID = ArrayOptFirstElem(XQuery("for $elem in boss_types where $elem/code = 'main' return $elem", {id: null})).id;
 		func_ID = ArrayOptFirstElem(XQuery("for $fm in func_managers where $fm/object_id = " + XQueryLiteral(plan.person_id) + " and boss_type_id = "+XQueryLiteral(MAIN_BOSS_TYPE_ID)+" return $fm"));
-		if (func_ID != undefined) {
+		
+        if (func_ID != undefined) {
 			func_ID = OptInt(func_ID.person_id, null);
+            func_lng = tools.call_code_library_method("nlmk_localization", "getCurLng", [func_ID, null]);
 		} else {
             continue;
         }
 		if (is_required == undefined){
 			if (planRemaining) {
 				if ( plan.notific_type == "ТУ" && collabTE.email == '' ) {
-					tools.call_code_library_method("nlmk", "create_notification", ['Boss_plan_remaining_duration_TU', func_ID, info_data, plan.person_id]);
+					tools.call_code_library_method("nlmk", "create_notification", [String('Boss_plan_remaining_duration_TU' + "_" + personLng), func_ID, info_data, plan.person_id]);
 					// +
 					needUpdateNotificationRemind = true;
 				} 
 				if ( plan.notific_type == "КУ"  && collabTE.email == '' ) {
 					if (plan.with_cancel) {
-						tools.call_code_library_method("nlmk", "create_notification", ['Boss_plan_remaining_duration_with_cancel', func_ID, info_data, plan.person_id]);
+						tools.call_code_library_method("nlmk", "create_notification", [String('Boss_plan_remaining_duration_with_cancel' + "_" + personLng), func_ID, info_data, plan.person_id]);
 						// +
 						needUpdateNotificationRemind = true;
 					} else {
-						tools.call_code_library_method("nlmk", "create_notification", ['Boss_plan_remaining_duration', func_ID, info_data, plan.person_id]);
+						tools.call_code_library_method("nlmk", "create_notification", [String('Boss_plan_remaining_duration' + "_" + personLng), func_ID, info_data, plan.person_id]);
 						// +
 						needUpdateNotificationRemind = true;
 
@@ -204,18 +208,18 @@ for (plan in active_plans) {
 			} else {
 				if ( plan.notific_type == "КУ"  && collabTE.email == '' ) {
 					if (plan.with_cancel){
-					tools.call_code_library_method("nlmk", "create_notification", ['Boss_plan_remaining_0', func_ID, info_data, plan.person_id]);
+					tools.call_code_library_method("nlmk", "create_notification", [String('Boss_plan_remaining_0' + "_" + personLng), func_ID, info_data, plan.person_id]);
 				}
 			}
 				if ( plan.notific_type == "ТУ" ) {
-					tools.call_code_library_method("nlmk", "create_notification", ['Boss_plan_remaining_0_TU', func_ID, info_data, plan.person_id]);
+					tools.call_code_library_method("nlmk", "create_notification", [String('Boss_plan_remaining_0_TU' + "_" + personLng), func_ID, info_data, plan.person_id]);
 				}
 			}
 		} else {
 			if (planRemaining) {
-					tools.call_code_library_method("nlmk", "create_notification", ['Boss_plan_remaining_duration_TU', func_ID, info_data, plan.person_id]);
+					tools.call_code_library_method("nlmk", "create_notification", [String('Boss_plan_remaining_duration_TU' + "_" + personLng), func_ID, info_data, plan.person_id]);
 			} else {
-					tools.call_code_library_method("nlmk", "create_notification", ['Boss_plan_remaining_0_TU', func_ID, info_data, plan.person_id]);
+					tools.call_code_library_method("nlmk", "create_notification", [String('Boss_plan_remaining_0_TU' + "_" + personLng), func_ID, info_data, plan.person_id]);
 			} 
 		}
 		if(needUpdateNotificationRemind) {
