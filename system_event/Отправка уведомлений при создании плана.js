@@ -71,9 +71,9 @@ try {
 			"person": collabTE.fullname,
 			"prog_name" : String(cmpd_program_info.name),
 			"end_date" : end_date,
-			"curator" : (curLng == 'ru' ? curator.fullname + " " + curator.email : String(tools.call_code_library_method("nlmk_localization", "latinTranslation", [curator.fullname])) + " " + curator.email)
+			"curator" : (curLng == 'ru' ? curator.fullname + " " + curator.email : tools.call_code_library_method("nlmk_localization", "latinTranslation", [curator.fullname]) + " " + curator.email)
 		};
-		
+
 		if (cmpd_program_info.notific_type != "" && !collabTE.is_dismiss) {
 			
 			if (collabTE.email != ''  && collabTE.email != undefined) {

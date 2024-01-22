@@ -13,12 +13,16 @@ function createNotification(type, personID, educationPlanId, info) {
     if (StrCharCount(personEmail) > 0) {
 
         personLng = tools.call_code_library_method("nlmk_localization", "getCurLng", [personID, null]);
+        if(personLng == 'en') {
+            info.curator = String(tools.call_code_library_method("nlmk_localization", "latinTranslation", [info.curator]))
+        }
+
         if (type == "КУ") {
-            tools.call_code_library_method("nlmk", "create_notification", [String("KU_education_method_assign" + "_" + personLng), personID, info, educationPlanId]);
+            tools.call_code_library_method("nlmk", "create_notification", [String("KU_education_method_assign" + "_" + personLng), personID, tools.object_to_text(info, 'json'), educationPlanId]);
         }
 
         if (type == "ТУ") {
-            tools.call_code_library_method("nlmk", "create_notification", [String("TU_education_method_assign" + "_" + personLng), personID, info, educationPlanId]);
+            tools.call_code_library_method("nlmk", "create_notification", [String("TU_education_method_assign" + "_" + personLng), personID, tools.object_to_text(info, 'json'), educationPlanId]);
         }
 
     } else {
@@ -27,12 +31,15 @@ function createNotification(type, personID, educationPlanId, info) {
 
         if (funcID != undefined) {
             funcLng = tools.call_code_library_method("nlmk_localization", "getCurLng", [funcID.person_id, null]);
+            if(funcLng == 'en') {
+                info.curator = String(tools.call_code_library_method("nlmk_localization", "latinTranslation", [info.curator]))
+            }
             if (type == "КУ") {
-                tools.call_code_library_method("nlmk", "create_notification", [String("KU_education_method_assign_boss" + "_" + funcLng), funcID.person_id, info, educationPlanId]);
+                tools.call_code_library_method("nlmk", "create_notification", [String("KU_education_method_assign_boss" + "_" + funcLng), funcID.person_id, tools.object_to_text(info, 'json'), educationPlanId]);
             }
 
             if (type == "ТУ") {
-                tools.call_code_library_method("nlmk", "create_notification", [String("TU_education_method_assign_boss" + "_" + funcLng), funcID.person_id, info, educationPlanId]);
+                tools.call_code_library_method("nlmk", "create_notification", [String("TU_education_method_assign_boss" + "_" + funcLng), funcID.person_id, tools.object_to_text(info, 'json'), educationPlanId]);
             }
 
         }
@@ -160,7 +167,6 @@ try {
 
     Log(logName, recordLogs, "Всего учебных программ на проверку:  " + ArrayCount(educationMethods));
 	
-	alert(personID + ' ' + ArrayCount(educationMethods))
     for (educationMethod in educationMethods) {
 
         Log(logName, recordLogs, "Учебная программа: " + educationMethod.name);
@@ -174,9 +180,6 @@ try {
 
         Log(logName, recordLogs, "Нужно ли отправлять уведомление:  " + (needCreate == true ? 'да' : 'нет'));
 
-		alert('needCreate ' + needCreate);
-		alert('notificationType ' + notificationType);
-		
         if (needCreate && (notificationType == "КУ" || notificationType == "ТУ")) {
 
             educationMethod.custom_elems.ObtainChildByKey('notification').value.Value = true;
@@ -206,7 +209,7 @@ try {
                 end_date_plan: (OptInt(duration.duration, 0 ) != 0 ? StrDate(DateOffset(teEducationPlan.create_date, duration.duration * 24 * 60 * 60), false) : 'бессрочно'),
                 required: String(required)
             }
-            createNotification(notificationType, personID, iEducationPlanID, tools.object_to_text(info, 'json'));
+            createNotification(notificationType, personID, iEducationPlanID, info);
 		}
     }
 
