@@ -91,11 +91,11 @@ function updateCollaborator(personID, data) {
     return collaboratorDoc.DocID
 }
 
-function sendNotification(person_id, lng) {
+function sendNotification(person_id, lng, password) {
     if (lng == "english") {
-        tools.call_code_library_method("nlmk", "create_notification", ["user_creation_en", person_id])
-    } else {
-        tools.call_code_library_method("nlmk", "create_notification", ["user_creation_ru", person_id])
+        tools.call_code_library_method("nlmk", "create_notification", ["user_creation_en", person_id, tools.object_to_text({'pwd': password},'json')])
+    } else { 
+        tools.call_code_library_method("nlmk", "create_notification", ["user_creation_ru", person_id, tools.object_to_text({'pwd': password},'json')])
     }
 }
 
@@ -167,7 +167,7 @@ function main() {
 
                 if (create_notification && OptInt(personId) != undefined) {
                     log("Отправка уведомления");
-                    sendNotification(personId, person.lng_id)
+                    sendNotification(personId, person.lng_id, person.password)
                 }
             }
 
