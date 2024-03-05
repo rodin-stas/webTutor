@@ -22,6 +22,41 @@ function getDataFiles(file_url) {
     return loadData;
 }
 
+function getPositionParentId(org_id, subdivision_name) {
+    var curSub = ArrayOptFirstElem(XQuery("for $elem in subdivisions where $elem/name =" + XQueryLiteral(subdivision_name) + " and $elem/org_id =" + XQueryLiteral(org_id) + " return $elem"))
+
+    if (curSub != undefined) {
+        return curSub.id
+    }
+
+    subdivisionDoc = tools.new_doc_by_name('subdivision', false);
+    subdivisionDoc.TopElem.name = subdivision_name;
+    subdivisionDoc.TopElem.code = subdivision_name;
+    subdivisionDoc.TopElem.org_id = org_id;
+
+    subdivisionDoc.BindToDb();
+    subdivisionDoc.Save()
+
+    return subdivisionDoc.DocID
+}
+
+// function getPositionId(org_id, parent_object_id, basic_collaborator_id, collaboratorDoc) {
+
+//     positionDoc = tools.new_doc_by_name('position', false);
+//     positionDoc.TopElem.code = 'external_position';
+//     positionDoc.TopElem.name = 'Внешняя должность';
+//     positionDoc.TopElem.org_id = org_id;
+//     positionDoc.TopElem.parent_object_id = parent_object_id;
+//     positionDoc.TopElem.basic_collaborator_id = basic_collaborator_id;
+
+//     tools.common_filling('collaborator', positionDoc.basic_collaborator_id, basic_collaborator_id, collaboratorDoc);
+
+//     positionDoc.BindToDb();
+//     positionDoc.Save()
+
+//     return positionDoc.DocID
+// }
+
 function createCollaborator(data) {
 
     collaboratorDoc = tools.new_doc_by_name('collaborator', false);
@@ -32,6 +67,7 @@ function createCollaborator(data) {
     collaboratorDocTE.email = data.email;
     collaboratorDocTE.password = data.password;
     collaboratorDocTE.org_id = data.org_id;
+
     collaboratorDocTE.lng_id = (data.lng_id == 'english' ? 'english' : null);
     collaboratorDocTE.is_dismiss = (tools_web.is_true(data.is_dismiss) ? 1 : 0);
     collaboratorDocTE.access.web_banned = (tools_web.is_true(data.is_dismiss) ? 1 : 0);
@@ -52,7 +88,32 @@ function createCollaborator(data) {
     }
 
     collaboratorDoc.BindToDb();
-    collaboratorDoc.Save()
+  
+    if (!tools_library.string_is_null_or_empty(data.subdivision)) {
+
+        positionParentId = getPositionParentId(data.org_id, data.subdivision);
+
+        positionDoc = tools.new_doc_by_name('position', false);
+        positionDoc.BindToDb();
+
+        positionDoc.TopElem.code = 'external_position';
+        positionDoc.TopElem.name = 'Внешняя должность';
+        positionDoc.TopElem.org_id = data.org_id;
+        positionDoc.TopElem.parent_object_id = positionParentId;
+        positionDoc.TopElem.basic_collaborator_id = collaboratorDoc.DocID;
+
+        collaboratorDocTE.position_parent_id = positionParentId;
+        collaboratorDocTE.position_id = positionDoc.DocID;
+        collaboratorDocTE.position_name = 'Внешняя должность';
+        collaboratorDoc.Save();
+    
+        tools.common_filling('collaborator', positionDoc.TopElem.basic_collaborator_id, collaboratorDoc.DocID, collaboratorDocTE);
+        positionDoc.TopElem.name = 'Внешняя должность';
+    
+        positionDoc.Save()
+    } else {
+        collaboratorDoc.Save();
+    }
 
     return collaboratorDoc.DocID
 }
@@ -86,16 +147,42 @@ function updateCollaborator(personID, data) {
         collaboratorDocTE.middlename = names[2]
     }
 
-    collaboratorDoc.Save()
+    collaboratorDoc.BindToDb();
+    
+    
+    if (!tools_library.string_is_null_or_empty(data.subdivision)) {
+
+        positionParentId = getPositionParentId(data.org_id, data.subdivision);
+
+        positionDoc = tools.new_doc_by_name('position', false);
+        positionDoc.BindToDb();
+
+        positionDoc.TopElem.code = 'external_position';
+        positionDoc.TopElem.org_id = data.org_id;
+        positionDoc.TopElem.parent_object_id = positionParentId;
+        positionDoc.TopElem.basic_collaborator_id = collaboratorDoc.DocID;
+
+        collaboratorDocTE.position_parent_id = positionParentId;
+        collaboratorDocTE.position_id = positionDoc.DocID;
+        collaboratorDocTE.position_name = 'Внешняя должность';
+        collaboratorDoc.Save();
+    
+        tools.common_filling('collaborator', positionDoc.TopElem.basic_collaborator_id, collaboratorDoc.DocID, collaboratorDocTE);
+        positionDoc.TopElem.name = 'Внешняя должность';
+    
+        positionDoc.Save()
+    } else {
+        collaboratorDoc.Save();
+    }
 
     return collaboratorDoc.DocID
 }
 
 function sendNotification(person_id, lng, password) {
     if (lng == "english") {
-        tools.call_code_library_method("nlmk", "create_notification", ["user_creation_en", person_id, tools.object_to_text({'pwd': password},'json')])
-    } else { 
-        tools.call_code_library_method("nlmk", "create_notification", ["user_creation_ru", person_id, tools.object_to_text({'pwd': password},'json')])
+        tools.call_code_library_method("nlmk", "create_notification", ["user_creation_en", person_id, tools.object_to_text({ 'pwd': password }, 'json')])
+    } else {
+        tools.call_code_library_method("nlmk", "create_notification", ["user_creation_ru", person_id, tools.object_to_text({ 'pwd': password }, 'json')])
     }
 }
 
@@ -138,7 +225,8 @@ function main() {
                 'org_id': String(aData[i][4]),
                 'password': String(aData[i][5]),
                 'lng_id': String(aData[i][6]),
-                'is_dismiss': String(aData[i][7])
+                'is_dismiss': String(aData[i][7]),
+                'subdivision': String(aData[i][8])
             })
         }
         aData = [];
@@ -170,8 +258,6 @@ function main() {
                     sendNotification(personId, person.lng_id, person.password)
                 }
             }
-
-
         }
 
         if (delete_file_from_server && LdsIsServer) {
@@ -181,7 +267,7 @@ function main() {
 
         log("Агент завершил работу")
     } catch (err) {
-        log(err)
+        log("Ошибка в агенте с id 7326885397452843976 " + err)
     }
 }
 
