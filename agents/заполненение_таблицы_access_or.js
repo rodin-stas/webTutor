@@ -42,6 +42,18 @@
 // }
 
 function updatePersonAccess(str) {
+    Log(logName, "Записываем: " + ArrayCount(deleteArr));
+    Log(logName, "sql:  \n\
+    BEGIN \n\
+        INSERT INTO [access_or] ( \n\
+            [id], \n\
+            [object_ids], \n\
+            [hex],\n\
+            [update_date]\n\
+        ) VALUES \n\
+       "+ str + "\n\
+    END \n\
+");
     ArrayDirect(XQuery("sql:  \n\
         BEGIN \n\
             INSERT INTO [access_or] ( \n\
@@ -58,16 +70,32 @@ function updatePersonAccess(str) {
 }
 
 function deleteAccess(arrIds) {
-    ArrayDirect(XQuery("sql: \n\
-    DECLARE @ids TABLE (id bigint);\n\
-    INSERT INTO @ids VALUES\n\
-    "+ ArrayMerge(arrIds, '"(" + This + ")"', ",") + ";\n\
-        DELETE \n\
-        FROM \n\
-            [access_or] \n\
-        WHERE \n\
-            [id] IN (SELECT [id] FROM @ids) \n\
-    "));
+    elemCount = 1000;
+    pages = (ArrayCount(_accessData) / elemCount) + 1
+    for (i = 1; i <= pages; i++) {
+
+        startPos = i == 1 ? 0 : (elemCount * (i - 1));
+        elems = ArrayRange(arrIds, startPos, elemCount);
+
+        if (ArrayCount(elems) > 0) {
+            Log(logName, "Удаляем записи с -" + startPos + " по - " + ((startPos + elemCount) - 1));
+
+            ArrayDirect(XQuery("sql: \n\
+            DECLARE @ids TABLE (id bigint);\n\
+            INSERT INTO @ids VALUES\n\
+            "+ ArrayMerge(elems, '"(" + This + ")"', ",") + ";\n\
+                DELETE \n\
+                FROM \n\
+                    [access_or] \n\
+                WHERE \n\
+                    [id] IN (SELECT [id] FROM @ids) \n\
+            "));
+        }
+
+        Log(logName, "TUT3");
+    }
+
+
 
 }
 
@@ -75,16 +103,15 @@ function getStrParams(params) {
     str = "";
     for (param in params) {
         if (StrCharCount(str) == 0) {
-            str = str + "(" + param.id + ",'" + param.access + "','" + param.hex + "','" + Date() + "')"
+            str = str + "(" + param.id + ",'" + param.access + "','" + param.hex + "',CONVERT(datetime,'" + Date() + "',103))" 
 
         } else {
-            str = str + "," + "(" + param.id + ",'" + param.access + "','" + param.hex + "','" + Date() + "')"
+            str = str + "," + "(" + param.id + ",'" + param.access + "','" + param.hex + "',CONVERT(datetime,'" + Date() + "',103))" 
         }
     }
 
     return str;
 }
-
 
 function Log(log_file_name, message) {
     if (recordLogs) {
@@ -165,8 +192,10 @@ try {
     var deleteArr = ArrayUnion(ArrayExtractKeys(curDismiss, 'id'), ArrayExtractKeys(_accessData, 'id'));
     Log(logName, "Всего на удаление:" + ArrayCount(deleteArr));
 
-    deleteAccess(deleteArr);
-
+    if (ArrayCount(deleteArr) > 0) {
+        deleteAccess(deleteArr);
+    }
+    
     var elemCount = 1000;
     var pages = (ArrayCount(_accessData) / elemCount) + 1
 
