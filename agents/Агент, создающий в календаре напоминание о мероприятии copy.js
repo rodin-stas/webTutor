@@ -99,7 +99,7 @@ if (SmtpFound)
 		// выводим сообщение о полученных датах в лог
 		if (ShowAlert) alert("start="+_start_date+" end="+_end_date);
 		
-		event_arr=XQuery( "for $obj in events where ($obj/status_id='plan' or $obj/status_id='active') and $obj/start_date!= null() and $obj/start_date>= date('" +_start_date+"') and $obj/start_date<=date ('" +_end_date+"') return $obj" ); // получим массив мероприятий в статусе Планируется и Проводится с непустой датой начала, находящейся в промежутке между сегодняшней датой и daysCount в будущее
+		event_arr=ArraySelectAll(XQuery( "for $obj in events where ($obj/status_id='plan' or $obj/status_id='active') and $obj/start_date!= null() and $obj/start_date>= date('" +_start_date+"') and $obj/start_date<=date ('" +_end_date+"') return $obj" )); // получим массив мероприятий в статусе Планируется и Проводится с непустой датой начала, находящейся в промежутке между сегодняшней датой и daysCount в будущее
 
 		// выводим сообщение о количестве таких мероприятий в лог
 		if (ShowAlert) alert('ArrayCount(event_arr)='+ArrayCount(event_arr));
@@ -618,7 +618,7 @@ if (SmtpFound)
 								html_text += 'Рады подтвердить, что Вы зарегистрированы на обучение <strong>'+teEvent.name+'</strong>.<br><br>\r\n';
 							} else {
 								html_text += '<h2 style="margin: 0cm; line-height: 21pt;"><span style="color: black; font-family: arial,sans-serif; font-size: 16pt;"><strong>'+iRecipientElemDoc.TopElem.firstname+' '+iRecipientElemDoc.TopElem.middlename+'</strong></span><span style="color: black; font-family: arial,sans-serif; font-size: 16pt; font-weight: normal;">, good afternoon!</span></h2><br>';
-								html_text += 'We are pleased to confirm that you have been registered <strong>'+teEvent.name+'</strong>.<br><br>\r\n';
+								html_text += 'We are pleased to confirm that you have been registered for training <strong>'+teEvent.name+'</strong>.<br><br>\r\n';
 							}
 							
 							
@@ -1051,7 +1051,7 @@ Content-Type: text/calendar; method=REQUEST; charset='+DefCharset+';
 										html_text += 'Рады подтвердить, что Вы зарегистрированы на обучение <strong>'+teEvent.name+'</strong>.<br><br>\r\n';
 									} else {
 										html_text += '<h2 style="margin: 0cm; line-height: 21pt;"><span style="color: black; font-family: arial,sans-serif; font-size: 16pt;"><strong>'+iRecipientElemDoc.TopElem.firstname+'</strong></span><span style="color: black; font-family: arial,sans-serif; font-size: 16pt; font-weight: normal;">, good afternoon!</span></h2><br>';
-										html_text += 'We are pleased to confirm that you have been registered <strong>'+teEvent.name+'</strong>.<br><br>\r\n';
+										html_text += 'We are pleased to confirm that you have been registered for training <strong>'+teEvent.name+'</strong>.<br><br>\r\n';
 									}
 									
 									placeid = teEvent.place_id;

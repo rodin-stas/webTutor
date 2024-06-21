@@ -1,240 +1,312 @@
-// коды кастомных полей берём из переменных Агента
+/**
+ * code: NLMK-import-good-event-result-from-excel
+ * Задача:
+ * [2024.02.01] https://jira.nlmk.com/browse/WEBSOFT-1890
+ * Необходимо доработать агент по проставлению типа результата мероприятия ид 7169307162279505258.
+ * Внести корректировки для проставления типа результата мероприятия "Сдано" | "Не сдано" | "Пройдено курсовое обучение"
+ *   При проставлении данного результата поля дата протокола и номер протокола должны быть необязательными
+ */
+var goodEventResultTypeId = OptInt(Param.GetOptProperty("good_event_result_type"));
+var DateProtocolEventGoodResultCode = Param.GetOptProperty("date_of_protocol_of_event_good_result_custom_field_code");
+var numberProtocolEventGoodResultCode = Param.GetOptProperty("number_of_protocol_of_event_good_result_custom_field_code");
+var badEventResultTypeId = OptInt(Param.GetOptProperty("bad_event_result_type"));
+var dateProtocolEventBadResultCode = Param.GetOptProperty("date_of_protocol_of_event_bad_result_custom_field_code");
+var numberProtocolEventBadResultCode = Param.GetOptProperty("number_of_protocol_of_event_bad_result_custom_field_code");
+var courseEventResultTypeId = OptInt(Param.GetOptProperty("course_event_result_type"));
+var dateProtocolEventCourseResultCode = Param.GetOptProperty("date_of_protocol_of_event_course_result_custom_field_code");
+var numberProtocolEventCourseResultCode = Param.GetOptProperty("number_of_protocol_of_event_course_result_custom_field_code");
+/** Перезаписывать Дату, номер протокола, оценку за итоговое тестирование в результатах мероприятия? */
+var overwriteResultTypes = Trim(Param.GetOptProperty("overwrite_or_skip_existing")) == "overwrite_existing";
+var resultTypeVariants = String(Param.GetOptProperty("result_type_variants", ""));
+var excelFileUrl = undefined;
+var logString = "";
+var debugMode = true;
 
-if ((Param.result_type_variants == 'only_good') && ((Param.good_event_result_type == '') || (Param.date_of_protocol_of_event_good_result_custom_field_code == '') || (Param.number_of_protocol_of_event_good_result_custom_field_code == '')))
-{
-	alert('Выбрано Тип результата будет только Сдано, но не заданы коды всех Переменных Агента: good_event_result_type, date_of_protocol_of_event_good_result_custom_field_code, number_of_protocol_of_event_good_result_custom_field_code.\nВыполнение Агента остановлено.');
-	Cancel();
+function checkResultTypeEvent(resultType) {
+    return resultType == "сдано" || resultType == "не сдано" || resultType == "пройдено курсовое обучение";
 }
 
-if ((Param.result_type_variants == 'good_and_bad') && ((Param.good_event_result_type == '') || (Param.date_of_protocol_of_event_good_result_custom_field_code == '') || (Param.number_of_protocol_of_event_good_result_custom_field_code == '') || (Param.bad_event_result_type == '') || (Param.date_of_protocol_of_event_bad_result_custom_field_code == '') || (Param.number_of_protocol_of_event_bad_result_custom_field_code == '')))
-{
-	alert('Выбрано Тип результата может быть Сдано и Не сдано, но не заданы коды всех Переменных Агента: good_event_result_type, date_of_protocol_of_event_good_result_custom_field_code, number_of_protocol_of_event_good_result_custom_field_code, bad_event_result_type, date_of_protocol_of_event_bad_result_custom_field_code, number_of_protocol_of_event_bad_result_custom_field_code.\nВыполнение Агента остановлено.');
-	Cancel();
+/**
+ * Добавление нулей
+ * @param {string} val - значение 
+ * @returns {string}
+ */
+function addZeros(val) {
+    var result = val;
+    while (StrCharCount(result ) < 8) {
+        result = "0" + result;
+    }
+
+    return result;
 }
-
-if ((Param.result_type_variants == 'good_and_bad_and_course')
- && ((Param.good_event_result_type == '') 
- || (Param.date_of_protocol_of_event_good_result_custom_field_code == '') 
- || (Param.number_of_protocol_of_event_good_result_custom_field_code == '') 
- || (Param.bad_event_result_type == '') 
- || (Param.date_of_protocol_of_event_bad_result_custom_field_code == '') 
- || (Param.number_of_protocol_of_event_bad_result_custom_field_code == '')
- || (Param.course_event_result_type == '')
- || (Param.date_of_protocol_of_event_course_result_custom_field_code == '') 
- || (Param.number_of_protocol_of_event_course_result_custom_field_code == '')
- ))
-{
-	alert('Выбрано Тип результата может быть Сдано, Не сдано и Пройдено курсовое обучение, но не заданы коды всех Переменных Агента: good_event_result_type, date_of_protocol_of_event_good_result_custom_field_code, number_of_protocol_of_event_good_result_custom_field_code, bad_event_result_type, date_of_protocol_of_event_bad_result_custom_field_code, number_of_protocol_of_event_bad_result_custom_field_code, course_event_result_type, date_of_protocol_of_event_course_result_custom_field_code, number_of_protocol_of_event_course_result_custom_field_code \nВыполнение Агента остановлено.');
-	Cancel();
-}
-// Получим переменные из Переменных Агента
-_good_event_result_type_id = OptInt(Param.good_event_result_type);
-_date_of_protocol_of_event_good_result_custom_field_code = Param.date_of_protocol_of_event_good_result_custom_field_code;
-_number_of_protocol_of_event_good_result_custom_field_code = Param.number_of_protocol_of_event_good_result_custom_field_code;
-_bad_event_result_type_id = OptInt(Param.bad_event_result_type);
-_date_of_protocol_of_event_bad_result_custom_field_code = Param.date_of_protocol_of_event_bad_result_custom_field_code;
-_number_of_protocol_of_event_bad_result_custom_field_code = Param.number_of_protocol_of_event_bad_result_custom_field_code;
-
-_course_event_result_type_id = OptInt(Param.course_event_result_type);
-_date_of_protocol_of_event_course_result_custom_field_code = Param.date_of_protocol_of_event_course_result_custom_field_code;
-_number_of_protocol_of_event_course_result_custom_field_code = Param.number_of_protocol_of_event_course_result_custom_field_code;
-
-// зададим переменную - удалять ли файл с сервера
-_delete_file_from_server = 'No'; // изначально она No
 
 /**
  * @description: открытие файла excel и получение данных с первого листа
  * @return: (Array) - двумерный массив данных с первого листа excel
 */
-sExcelFileUrl = undefined;
-function getDataFiles()
-	{
-		try
-			{
-				// если агент выполняется на клиенте, то запросим файл
-				sExcelFileUrl = Screen.AskFileOpen( '', 'Выберите файл Excel' );
-			}
-		catch(err)
-			{
-				// если агент выполняется на сервере, то берём путь к файлу из переменной
-				if (StrCharCount(Param.SERVER_FILE_URL) == 0)
-				{
-					alert( 'ОШИБКА: не задан пусть к файлу на сервере в Переменной SERVER_FILE_URL.\nВыполнение Агента остановлено.');
-					Cancel();
-				}
-				sExcelFileUrl = Trim(Param.SERVER_FILE_URL);
-				_delete_file_from_server = 'Yes'; // меняем переменную удаления файла с сервера на Yes
-			}
+function getDataFiles() {
+    try {
+        if (LdsIsClient) {
+            excelFileUrl = Screen.AskFileOpen("", 'Выберите файл Excel');
+        } else {
+            excelFileUrl = Trim(Param.GetOptProperty("SERVER_FILE_URL", ""));
+            if (excelFileUrl.length == 0) {
+                throw "ОШИБКА: не задан пусть к файлу на сервере в Переменной SERVER_FILE_URL.\nВыполнение Агента остановлено.";
+            }
+        }
+    } catch (err) {
+        throw "getDataFiles: " + err;
+    }
 
-		try
-			{
-				docFile = OpenDoc( sExcelFileUrl, 'format=excel' );
-				oSheet = ArrayFirstElem( docFile.TopElem );
-			}
-		catch(err)
-			{
-				alert( 'ОШИБКА: невозможно получить доступ к файлу ' + sExcelFileUrl + '\nСкорее всего, файл открыт.\nЗакройте файл и повторите попытку.');
-				Cancel();
-			}
+    try {
+        var docFile = OpenDoc(excelFileUrl, 'format=excel');
+        var oSheet = ArrayFirstElem(docFile.TopElem); //???
+        var excelData = [];
+        var eventId = void 0;
+        var tabNumber = void 0;
+        var eventResultType = void 0;
+        var protocolNumber = void 0;
+        var protocolDate = void 0;
+        for (var i = 1; i < ArrayCount(oSheet); i++) {
+            try {
+                eventId = Int(Trim(oSheet[i][0]));
+            } catch (e) {
+                logString += 'Строка ' + (i + 1) + ' пропущена - ID мероприятия указан не верно\n';
 
-		return oSheet;
-	}
+                continue;
+            }
 
-/// Получаем массив данных из файла и преобразуем в полноценный массив объектов
-aData = getDataFiles();
-aEntries = new Array();
+            tabNumber = Trim(oSheet[i][1]);
+            if (tabNumber == "") {
+                logString += 'Строка ' + (i + 1) + ' пропущена - не задан Табельный номер\n';
 
-for ( i = 1; i < ArrayCount( aData ); i++ )
-	{
-		aEntries.push({
-			'event_id': String( aData[i][0] ),
-			'person_tub_number': String( aData[i][1] ),
-			'event_result_type': String( aData[i][2] ),
-			'number_of_protocol': String( aData[i][3] ),
-			'date_of_protocol': String( aData[i][4] )
-		})
-	}
-aData = [];
+                continue;
+            }
+            tabNumber = addZeros(tabNumber);
 
-// функция выделяет значения атрибута, указанного в аргументе
-ArrayEvent_ids = ArrayExtract( aEntries, "event_id" );
-ArrayPerson_tub_numbers = ArrayExtract( aEntries, "person_tub_number" );
-ArrayEvent_result_types = ArrayExtract( aEntries, "event_result_type" );
-ArrayNumber_of_protocols = ArrayExtract( aEntries, "number_of_protocol" );
-ArrayDate_of_protocols = ArrayExtract( aEntries, "date_of_protocol" );
+            eventResultType = StrLowerCase(Trim(oSheet[i][2]));
+            if (!checkResultTypeEvent(eventResultType)) {
+                logString += "Строка " + (i + 1) + " пропущена - неправильно заполнен Результат мероприятия. " +
+                    "Возможные варианты: Сдано, Не сдано, Пройдено курсовое обучение\n";
+                
+                continue;
+            }
 
-sCreatedCategoryIDs = ''; // переменная, коллекционирующая созданные категории (id), пока не используем, это задел на будущее, вдруг потребуется проверка, была ли категория создана ренее или в рамках этого агента
+            protocolNumber = Trim(oSheet[i][3]);
+            protocolDate = OptDate(Trim(oSheet[i][4]));
+            if (protocolDate == undefined && Trim(oSheet[i][4]) != "") {
+                logString += 'Строка ' + (i + 1) + ' пропущена - неправильно заполнена Дата протокола\n';
 
-sLog = '' // накапливаемое сообщение
-sItog = '' // итоговое сообщение
+                continue;
+            }
 
-for (i = 0; i < ArrayCount(ArrayEvent_ids); i++)
-{
-	if (StrCharCount(ArrayEvent_ids[i]) != 0)
-	{
-		// отберём мероприятия по ID
-		_ArrayEvents = ArrayDirect(XQuery("for $elem in events where $elem/id = " + OptInt(ArrayEvent_ids[i]) + " return $elem"));
-		if (ArrayOptFirstElem(_ArrayEvents) != undefined)
-		{
-			if (StrCharCount(ArrayPerson_tub_numbers[i]) != 0)
-			{
-				// табельный номер сотрудника - в системе это login
-				_ArrayPersons = ArrayDirect(XQuery("for $elem in collaborators where $elem/login = '" + Trim(ArrayPerson_tub_numbers[i]) + "' return $elem"));
-				if (ArrayOptFirstElem(_ArrayPersons) != undefined)
-				{
-					if (ArrayCount(_ArrayPersons) == 1) // если найдено более двух сотрудников
-					{
-						// проверим Тип результата мероприятия
-						if (StrCharCount(ArrayEvent_result_types[i]) != 0)
-						{
-							// Тип результата мероприятия
-							switch(StrLowerCase(Trim(ArrayEvent_result_types[i]))) {
-								case 'сдано' :
-									_event_result_type_id = _good_event_result_type_id;
-									_date_of_protocol_of_event_result_custom_field_code = _date_of_protocol_of_event_good_result_custom_field_code;
-									_number_of_protocol_of_event_result_custom_field_code = _number_of_protocol_of_event_good_result_custom_field_code;
-									break;
-								case 'не сдано' :
-									_event_result_type_id = _bad_event_result_type_id;
-									_date_of_protocol_of_event_result_custom_field_code = _date_of_protocol_of_event_bad_result_custom_field_code;
-									_number_of_protocol_of_event_result_custom_field_code = _number_of_protocol_of_event_bad_result_custom_field_code;
-									break;
-								case 'пройдено курсовое обучение' :
-									_event_result_type_id = _course_event_result_type_id;
-									_date_of_protocol_of_event_result_custom_field_code = _date_of_protocol_of_event_course_result_custom_field_code;
-									_number_of_protocol_of_event_result_custom_field_code = _number_of_protocol_of_event_course_result_custom_field_code;
-									break;
-								default:
-									sLog = sLog + ' Указан неправильный тип Возможные варианты(Сдано, Не сдано, Пройдено курсовое обучение). Строка пропущена';
-							}
-							
-							// Номер протокола
-							if (StrCharCount(ArrayNumber_of_protocols[i]) != 0)
-							{
-								// Дата протокола
-								if (StrCharCount(ArrayDate_of_protocols[i]) != 0)
-								{
-									// отберём результаты мероприятия, чтобы этот результат отредактировать
-									_ArrayEventResults = ArrayDirect(XQuery("for $elem in event_results where $elem/event_id = " + _ArrayEvents[0].id + " and $elem/person_id = " + _ArrayPersons[0].id + " return $elem"));
-									if (ArrayOptFirstElem(_ArrayEventResults) != undefined)
-									{
-										for (_eventResult in _ArrayEventResults)
-										{
-											_doc_eventResult = OpenDoc(UrlFromDocID(_eventResult.id));
-											_participate = _doc_eventResult.TopElem.not_participate;
-											_assist = _doc_eventResult.TopElem.is_assist
+            excelData.push({
+                event_id: eventId,
+                person_tab_number: tabNumber,
+                event_result_type: eventResultType,
+                number_of_protocol: protocolNumber,
+                date_of_protocol: protocolDate,
+                f_estimate: Trim(oSheet[i][5]),
+            });
+        }
 
-											if(_participate || (!_participate && !_assist) ) {
-												sLog = sLog + 'Сотрудник оказался от участия или нет признаков участия и подтверждения';
-												alert("Сотрудник оказался от участия или нет признаков участия и подтверждения")
-												continue;
-											}
-
-											number_of_changes_in_eventResult = 0; // признак - были ли изменения в результате данного мероприятия для данного сотрудника
-											if (_doc_eventResult.TopElem.event_result_type_id != _event_result_type_id) // если Тип результата не такой, какой требуется - перезаписываем
-												{
-													_doc_eventResult.TopElem.event_result_type_id = _event_result_type_id;
-													number_of_changes_in_eventResult++; // признак внесения изменений
-												}
-											if (Param.overwrite_or_skip_existing == 'overwrite_existing') // если в параметре указано перезаписывать Дату и номер протокола в результатах мероприятия
-											{
-												if ((_doc_eventResult.TopElem.custom_elems.GetOptChildByKey(_date_of_protocol_of_event_result_custom_field_code, 'name') == undefined) || (DateNewTime(Date(_doc_eventResult.TopElem.custom_elems.GetOptChildByKey(_date_of_protocol_of_event_result_custom_field_code, 'name').value)) != DateNewTime(Date(ArrayDate_of_protocols[i])))) // если Дата протокола не такая, как требуется - перезаписываем
-												{
-													_doc_eventResult.TopElem.custom_elems.ObtainChildByKey(_date_of_protocol_of_event_result_custom_field_code, 'name').value = Date(ArrayDate_of_protocols[i]); // Дата протокола из мероприятия прописывается в результат мероприятия
-													number_of_changes_in_eventResult++; // признак внесения изменений
-												}
-												if ((_doc_eventResult.TopElem.custom_elems.GetOptChildByKey(_number_of_protocol_of_event_result_custom_field_code, 'name') == undefined) || (_doc_eventResult.TopElem.custom_elems.GetOptChildByKey(_number_of_protocol_of_event_result_custom_field_code, 'name').value != Trim(ArrayNumber_of_protocols[i]))) // если Номер протокола не такой, как требуется - перезаписываем
-												{
-													_doc_eventResult.TopElem.custom_elems.ObtainChildByKey(_number_of_protocol_of_event_result_custom_field_code, 'name').value = Trim(ArrayNumber_of_protocols[i]); // Номер протокола из мероприятия прописывается в результат мероприятия
-													number_of_changes_in_eventResult++; // признак внесения изменений
-												}
-											}
-											else // если указано пропускать существующие значения
-											{
-												if ((_doc_eventResult.TopElem.custom_elems.GetOptChildByKey(_date_of_protocol_of_event_result_custom_field_code, 'name') == undefined) || (_doc_eventResult.TopElem.custom_elems.GetOptChildByKey(_date_of_protocol_of_event_result_custom_field_code, 'name').value == '')) // если Дата протокола отсутствует - перезаписываем
-												{
-													_doc_eventResult.TopElem.custom_elems.ObtainChildByKey(_date_of_protocol_of_event_result_custom_field_code, 'name').value = Date(ArrayDate_of_protocols[i]); // Дата протокола из мероприятия прописывается в результат мероприятия
-													number_of_changes_in_eventResult++; // признак внесения изменений
-												}
-												if ((_doc_eventResult.TopElem.custom_elems.GetOptChildByKey(_number_of_protocol_of_event_result_custom_field_code, 'name') == undefined) || (_doc_eventResult.TopElem.custom_elems.GetOptChildByKey(_number_of_protocol_of_event_result_custom_field_code, 'name').value == '')) // если Номер протокола отсутствует - перезаписываем
-												{
-													_doc_eventResult.TopElem.custom_elems.ObtainChildByKey(_number_of_protocol_of_event_result_custom_field_code, 'name').value = Trim(ArrayNumber_of_protocols[i]); // Номер протокола из мероприятия прописывается в результат мероприятия
-													number_of_changes_in_eventResult++; // признак внесения изменений
-												}
-											}
-											if (number_of_changes_in_eventResult > 0) // если изменения были
-												_doc_eventResult.Save(); // Сохраняемся
-										}
-									}
-									else sLog = sLog + ' не найден результат мероприятия по ID ' + OptInt(ArrayEvent_ids[i]) + ' для сотрудника с Табельным номером ' + Trim(ArrayPerson_tub_numbers[i]) + '. Строка пропущена';
-								}
-								else sLog = sLog + ' не указан Дата протокола. Строка пропущена';
-							}
-							else sLog = sLog + ' не указан Номер протокола. Строка пропущена';
-						}
-						else sLog = sLog + ' не указан Результат мероприятия. Строка пропущена';
-					}
-					else sLog = sLog + ' найдено более одного сотрудника с Табельным номером ' + Trim(ArrayPerson_tub_numbers[i]) + '. Строка пропущена';
-				}
-				else sLog = sLog + ' не найден сотрудник с Табельным номером ' + Trim(ArrayPerson_tub_numbers[i]) + '. Строка пропущена';
-			}
-			else sLog = sLog + ' не задан Табельный номер. Строка пропущена';
-		}
-		else sLog = sLog + ' не найдено мероприятие по ID ' + OptInt(ArrayEvent_ids[i]) + '. Строка пропущена';
-	}
-	else sLog = sLog + ' не задан ID мероприятия. Строка пропущена';
-		
-	iLineNumber = i + 1; // номер строки таблицы
-	if (sLog != '')
-		{
-			sItog = sItog + 'Строка ' + iLineNumber + ': ' + sLog + '\n';
-			sLog = '' // обнулим накапливаемое сообщение для следующей строки
-		}
-	if (sItog == '')
-	{
-		sItog = 'Всё прошло успешно';
-		if (_delete_file_from_server == 'Yes') // если документ открывался с сервера
-			DeleteDoc(sExcelFileUrl, true); // удаление документа после обработки в случае отсуствия ошибок в ходе выполнения
-	}
+        return excelData;
+    } catch (err) {
+        throw "ОШИБКА: невозможно получить доступ к файлу " + excelFileUrl +
+            "\nСкорее всего, файл открыт.\nЗакройте файл и повторите попытку.";
+    }
 }
-alert(sItog);
+function getResultTypeId(eventResultType) {
+    switch (eventResultType) {
+        case 'сдано': {
+            return goodEventResultTypeId;
+        }
+        case 'не сдано': {
+            return badEventResultTypeId;
+        }
+        case 'пройдено курсовое обучение': {
+            return courseEventResultTypeId;
+        }
+    }
+}
+
+function getEventResultProtocolDateCustomCode(eventResultType) {
+    switch (eventResultType) {
+        case 'сдано': {
+            return DateProtocolEventGoodResultCode;
+        }
+        case 'не сдано': {
+            return dateProtocolEventBadResultCode;
+        }
+        case 'пройдено курсовое обучение': {
+            return dateProtocolEventCourseResultCode;
+        }
+    }
+}
+
+function getEventResultProtocolNumberCustomCode(eventResultType) {
+    switch (eventResultType) {
+        case 'сдано': {
+            return numberProtocolEventGoodResultCode;
+        }
+        case 'не сдано': {
+            return numberProtocolEventBadResultCode;
+        }
+        case 'пройдено курсовое обучение': {
+            return numberProtocolEventCourseResultCode;
+        }
+    }
+}
+
+function main() {
+    if (goodEventResultTypeId == undefined || DateProtocolEventGoodResultCode == "" || numberProtocolEventGoodResultCode == "") {
+        throw "Не заданы коды Переменных Агента: " +
+            "good_event_result_type, date_of_protocol_of_event_good_result_custom_field_code, " +
+            "number_of_protocol_of_event_good_result_custom_field_code.\nВыполнение Агента остановлено.";
+    }
+
+    if ((resultTypeVariants == "good_and_bad" || resultTypeVariants == 'good_and_bad_and_course') &&
+        (badEventResultTypeId == undefined || dateProtocolEventBadResultCode == "" || numberProtocolEventBadResultCode == "")) {
+        throw "Не заданы коды Переменных Агента: " +
+            "bad_event_result_type, date_of_protocol_of_event_bad_result_custom_field_code, " +
+            "number_of_protocol_of_event_bad_result_custom_field_code.\nВыполнение Агента остановлено.";
+    }
+
+    if (resultTypeVariants == 'good_and_bad_and_course' &&
+        (courseEventResultTypeId == undefined || dateProtocolEventCourseResultCode == "" || numberProtocolEventCourseResultCode == "")) {
+        throw "Не заданы коды Переменных Агента: " +
+            "course_event_result_type, date_of_protocol_of_event_course_result_custom_field_code, " +
+            "number_of_protocol_of_event_course_result_custom_field_code.\nВыполнение Агента остановлено.";
+    }
+
+    // Получаем массив данных из файла и преобразуем в полноценный массив объектов
+    var excelData = getDataFiles();
+    if (excelData.length == 0) {
+        throw "Переданный файл не содержит корректных данных для обработки";
+    }
+
+    var foundPersons;
+    var curPersonId;
+    var eventResultTypeId;
+    var codeProtocolDate;
+    var codeProtocolNumber;
+    var eventResult;
+    var eventResultDoc;
+    var eventResultTE = undefined;
+    var changedData;
+    var oldEventId = undefined;
+    var eventFound = true;
+    for (var i = 0; i < excelData.length; i++) {
+        if (oldEventId != excelData[i].event_id) {
+            oldEventId == excelData[i].event_id;
+            eventFound = ArrayOptFirstElem(tools.xquery("for $elem in events where $elem/id = " + excelData[i].event_id + " return $elem")) != undefined;
+            if (!eventFound) {
+                logString += 'Не найдено мероприятие по ID ' + excelData[i].event_id + '. Строки с этим мероприятием пропущены\n';
+
+                continue;
+            }
+        }
+        if (!eventFound) {
+            continue;
+        }
+
+        // если в системе не может быть нескольких сотрудников с двумя логинами, то проверку на сотрудника и результат мероприятия можно объединить
+        // табельный номер сотрудника - в системе это login
+        foundPersons = ArraySelectAll(tools.xquery("sql: \
+            DECLARE @eventId BIGINT = " + Trim(excelData[i].event_id) + "; \
+            \
+            SELECT cs.id \
+            FROM collaborators cs \
+            INNER JOIN collaborator c ON c.id = cs.id \
+            CROSS APPLY c.data.nodes('collaborator/custom_elems') custom_elems(xml) \
+            INNER JOIN event_results ers ON ers.event_id = @eventId AND ers.person_id = cs.id \
+            WHERE \
+                cs.login = '" + excelData[i].person_tab_number + "' \
+                OR custom_elems.xml.value('(custom_elem[name=''service_number'']/value)[1]', 'NVARCHAR(50)') = '" + excelData[i].person_tab_number + "'"
+            )
+        );
+        
+        if (ArrayOptFirstElem(foundPersons) == undefined) {
+            logString += 'Не найден сотрудник с Табельным номером ' + XQueryLiteral(excelData[i].person_tab_number);
+            
+            continue;
+        }
+
+        // если найдено более двух сотрудников
+        if (ArrayCount(foundPersons) > 1) {
+            logString += 'Найдено несколько сотрудников с Табельным номером ' + XQueryLiteral(excelData[i].person_tab_number);
+
+            continue;
+        }
+
+        curPersonId = foundPersons[0].id;
+        eventResultTypeId = getResultTypeId(excelData[i].event_result_type);
+        codeProtocolDate = getEventResultProtocolDateCustomCode(excelData[i].event_result_type);
+        codeProtocolNumber = getEventResultProtocolNumberCustomCode(excelData[i].event_result_type);
+        // отберём результаты мероприятия, чтобы этот результат отредактировать
+        eventResult = ArrayOptFirstElem(XQuery("for $elem in event_results where $elem/event_id = " + excelData[i].event_id + " and $elem/person_id = " + curPersonId + " return $elem"));
+        if (eventResult == undefined) {
+            logString += 'Не найден результат мероприятия по ID ' + excelData[i].event_id + ' для сотрудника с Табельным номером ' + XQueryLiteral(excelData[i].person_tab_number);
+        }
+
+        eventResultDoc = tools.open_doc(eventResult.id.Value);
+        eventResultTE = eventResultDoc.TopElem;
+        if (eventResultTE.not_participate.Value || (!eventResultTE.not_participate.Value && !eventResultTE.is_assist.Value)) {
+            logString += "мероприятия по ID " + excelData[i].event_id + " для сотрудника с Табельным номером " + XQueryLiteral(excelData[i].person_tab_number) +
+                " Сотрудник отказался от участия или нет признаков участия и подтверждения";
+            
+            continue;
+        }
+        changedData = false; // были ли изменения в результате мероприятия для данного сотрудника
+        // если Тип результата не такой, какой требуется - перезаписываем
+        if (eventResultTE.event_result_type_id.Value != eventResultTypeId) {
+            eventResultTE.event_result_type_id.Value = eventResultTypeId;
+            changedData = true;
+        }
+
+        if (overwriteResultTypes) {
+            // если Дата протокола или Номер протокола или "Оценка за итоговое тестирование" не совпадают - перезаписываем
+            if (
+                eventResultTE.custom_elems.ObtainChildByKey(codeProtocolDate).value.Value != excelData[i].date_of_protocol ||
+                eventResultTE.custom_elems.ObtainChildByKey(codeProtocolNumber).value.Value != excelData[i].number_of_protocol ||
+                eventResultTE.custom_elems.ObtainChildByKey("f_estimate").value.Value != excelData[i].f_estimate
+            ) {
+                changedData = true;
+            }
+
+            eventResultTE.custom_elems.ObtainChildByKey(codeProtocolDate).value.Value = StrXmlDate(OptDate(excelData[i].date_of_protocol, ""));
+            eventResultTE.custom_elems.ObtainChildByKey(codeProtocolNumber).value.Value = excelData[i].number_of_protocol;
+            eventResultTE.custom_elems.ObtainChildByKey("f_estimate").value.Value = excelData[i].f_estimate;
+        } else { // если указано пропускать существующие значения
+            if (eventResultTE.custom_elems.ObtainChildByKey(codeProtocolDate).value.Value == "") {
+                eventResultTE.custom_elems.ObtainChildByKey(codeProtocolDate).value.Value = StrXmlDate(OptDate(excelData[i].date_of_protocol, ""));
+                changedData = true;
+            }
+
+            if (eventResultTE.custom_elems.ObtainChildByKey(codeProtocolNumber).value.Value == "") {
+                eventResultTE.custom_elems.ObtainChildByKey(codeProtocolNumber).value.Value = excelData[i].number_of_protocol;
+                changedData = true;
+            }
+        }
+
+        if (changedData) {
+            eventResultDoc.Save();
+        }
+    }
+}
+try {
+
+    main();
+} catch (e) {
+    logString += "err: " + e + "\n";
+}
+
+if (logString == "") {
+    logString = 'Всё прошло успешно\n';
+    if (LdsIsServer) {
+        DeleteDoc(excelFileUrl, true); // удаление документа после обработки в случае отсуствия ошибок в ходе выполнения
+    }
+}
+if (debugMode) {
+	alert("agent NLMK-import-good-event-result-from-excel\n" + logString);
+}
